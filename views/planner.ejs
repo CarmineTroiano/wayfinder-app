@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html22pdf.bundle.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -617,7 +617,7 @@
 
         function drawMarker(place) {
             const style = CAT_DATA[place.category] || CAT_DATA.altro;
-            const circle = L.circleMarker([place.lat, place.lng], {
+            const circle = L.circleMarker([place.lat, place.lng], { // Variabile 'circle' definita
                 radius: 6, fillColor: style.color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
             });
             let optionsHtml = tripDays.map((day, i) => `<option value="${i}">Giorno ${i+1}</option>`).join('');
@@ -631,9 +631,9 @@
                         <button onclick="addToDay('${place.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 rounded font-bold transition-colors">+</button>
                     </div>
                 </div>`;
-            c.bindPopup(popupContent);
-            markersMap[place.id]=c;
-            markersGroup.addLayer(c);
+            circle.bindPopup(popupContent); // Corretto: da 'c' a 'circle'
+            markersMap[place.id]=circle;   // Corretto: da 'c' a 'circle'
+            markersGroup.addLayer(circle);  // Corretto: da 'c' a 'circle'
         }
 
         function createCard(p, isTimeline = false, savedTime = '') {
