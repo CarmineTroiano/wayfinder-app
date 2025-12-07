@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>body{font-family:'Poppins',sans-serif;background:#f3f4f6;} #map{height:100%;width:100%;border-radius:1rem;} .activity-card{background:white;border-radius:10px;padding:12px;margin-bottom:8px;border-left-width:5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);} .in-timeline{border:1px solid #e5e7eb;} #pdf-template-viewer { display: none; }</style>
+    <style>body{font-family:'Poppins',sans-serif;background:#f3f4f6;} #map{height:100%;width:100%;border-radius:1rem;} .activity-card{background:white;border-radius:10px;padding:12px;margin-bottom:8px;border-left-width:5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);} .in-timeline{border:1px solid #e5e7eb;} .map-overlay{z-index:1000;} #pdf-template-viewer { display: none; }</style>
 </head>
 <body class="h-screen flex flex-col">
 
@@ -47,12 +47,11 @@
                                 const time = item.time || '';
 
                                 if (type === 'note') { %>
-                                    <div class="activity-card" style="border-left-color: #eab308; background-color: #fef9c3;">
+                                    <div class="activity-card" style="border-left-color: <%= item.border || '#eab308' %>; background-color: <%= item.bg || '#fef9c3' %>;">
                                         <div class="flex justify-between items-start">
                                             <h4 class="font-bold text-sm text-slate-800 italic"><%= item.text %></h4>
                                             <% if(time) { %><span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 rounded"><%= time %></span><% } %>
                                         </div>
-                                        <p class="text-xs text-yellow-600 mt-1">Nota Personale</p>
                                     </div>
                                 <% } else {
                                     const pid = item.id || item; 
@@ -92,30 +91,31 @@
             const container = document.getElementById('pdf-template-viewer');
             let html = `<div style="padding:40px; font-family:sans-serif;"><h1 style="color:#6366f1; border-bottom:2px solid #ccc; padding-bottom:10px;">${title}</h1><div style="margin-top:30px;">`;
             
-            // Logica PDF identica al planner
             document.querySelectorAll('.day-group').forEach(group => {
-                const header = group.querySelector('h3').innerText;
+                const dayHeader = group.querySelector('h3').innerText;
                 const cards = group.querySelectorAll('.activity-card');
+                
                 if(cards.length > 0) {
-                    html += `<h3 style="margin-top:20px; background:#f3f4f6; padding:5px;">${header}</h3><ul style="list-style:none; padding:0;">`;
+                    html += `<h3 style="margin-top:25px; color:#333; font-size:18px; background:#f3f4f6; padding:5px 10px;">${dayHeader}</h3><ul style="list-style:none; padding:0;">`;
                     cards.forEach(card => {
-                        const isNote = card.style.backgroundColor === 'rgb(254, 249, 195)'; // Check yellow
                         const name = card.querySelector('h4').innerText;
                         const time = card.querySelector('span.rounded')?.innerText || '';
                         const color = card.style.borderLeftColor;
-                        html += `<li style="background:${isNote?'#fef9c3':'#fff'}; border-left:4px solid ${color}; padding:10px; margin-bottom:5px; border:1px solid #eee; border-left-color:${color};"><strong>${time?time+' - ':''}${name}</strong> ${isNote?'(Nota)':''}</li>`;
+                        const bg = card.style.backgroundColor || '#fff';
+                        html += `<li style="background:${bg}; border-left:5px solid ${color}; padding:10px; margin-bottom:8px; border:1px solid #eee;"><strong>${time?time+' - ':''}${name}</strong></li>`;
                     });
                     html += `</ul>`;
                 }
             });
             html += `</div></div>`;
             container.innerHTML = html; container.style.display='block';
-            html2pdf().set({ margin:10, filename:`${title}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'} }).from(container).save().then(()=>{container.style.display='none'});
+            html2pdf().set({ margin: 10, filename: `${title.replace(/\s+/g,'_')}.pdf`, image: {type:'jpeg', quality:0.98}, html2canvas: {scale: 2}, jsPDF: {unit:'mm', format:'a4'} }).from(container).save().then(() => { container.style.display = 'none'; });
         }
 
         const trip = <%- JSON.stringify(trip.data) %>;
         const map = L.map('map').setView([41.9, 12.5], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OSM' }).addTo(map);
+
         const bounds = [];
         const addedIds = new Set();
         if(trip.schedule) trip.schedule.forEach(d => d.forEach(i => { if(i.type!=='note') addedIds.add(String(i.id||i)) }));
@@ -128,6 +128,7 @@
                 else if(p.category.toLowerCase().includes('party'))color='#ef4444';
                 else if(p.category.toLowerCase().includes('relax'))color='#10b981';
                 else color='#3b82f6';
+                
                 const m = L.circleMarker([p.lat, p.lng], {radius:8, fillColor:color, color:'#fff', weight:2, fillOpacity:1}).addTo(map);
                 m.bindPopup(p.name);
                 bounds.push([p.lat, p.lng]);
