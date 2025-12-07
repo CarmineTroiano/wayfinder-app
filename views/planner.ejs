@@ -27,7 +27,11 @@
         .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .activity-card { background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid #f1f5f9; border-left-width: 5px; transition: all 0.2s; position: relative; cursor: grab; }
+        .activity-card {
+            background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; border-left-width: 5px; 
+            transition: all 0.2s; position: relative; cursor: grab;
+        }
         .activity-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .activity-card:active { cursor: grabbing; }
         .in-timeline { background: #f8fafc; border: 1px solid #e2e8f0; border-left-width: 5px; }
@@ -46,11 +50,8 @@
         .mood-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
         .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
         .mood-card.selected { border-color: #6366f1; background: #e0e7ff; color: #4338ca; box-shadow: 0 0 0 2px #c7d2fe; }
-        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
-        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-
+        
         .filter-chip { font-size: 0.7rem; padding: 5px 10px; border-radius: 20px; background: white; border: 1px solid #e5e7eb; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
         .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
         .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
@@ -333,7 +334,7 @@
             } catch(e) { alert("Errore di connessione."); }
         }
 
-        // --- CARICAMENTO E INIZIALIZZAZIONE (FIX PERSI) ---
+        // --- CARICAMENTO ---
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tripId = urlParams.get('tripId');
@@ -540,7 +541,11 @@
             if(!dest) return alert("Inserisci una città!");
             document.getElementById('loading').classList.remove('hidden');
             
-            tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
+            // FIX: Genera i giorni solo se necessario (la prima volta) o se le date sono cambiate
+            // Altrimenti, assumiamo che l'utente stia solo cercando più luoghi per l'itinerario esistente.
+            if (tripDays.length === 0) {
+                 tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
+            }
             
             configureFiltersByMood(mood);
 
@@ -556,7 +561,7 @@
                 const { lat, lon } = data.destinationCoords;
                 map.setView([lat, lon], 13);
                 
-                // FIX LOGICA: AGGIUNGERE senza resettare allLoadedPlaces
+                // AGGIUNGIAMO i nuovi luoghi all'array esistente
                 data.places.forEach(p => {
                     p.category = normalizeCategory(p.category);
                     if (!allLoadedPlaces.some(existing => existing.id === p.id)) {
