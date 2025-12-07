@@ -43,6 +43,7 @@
             border-radius: 1rem; 
             z-index: 1; 
         }
+        /* Fix animazioni marker */
         .leaflet-marker-icon, .leaflet-marker-shadow { 
             animation: none !important; 
             transition: none !important; 
@@ -93,9 +94,11 @@
 
         /* --- CARD NOTE (LE NOTE GIALLINE) --- */
         .note-card {
-            background-color: #fef9c3 !important; /* Giallo chiaro */
-            border-left-color: #eab308 !important; /* Giallo scuro */
-            border: 1px solid #fef08a;
+            /* Default, poi sovrascritto da JS */
+            background-color: #fef9c3; 
+            border-left-color: #eab308;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: background-color 0.3s, border-left-color 0.3s;
         }
         .note-input {
             background: transparent; 
@@ -106,6 +109,19 @@
             color: #4b5563; 
             font-style: italic; 
             resize: none;
+        }
+        
+        /* Pallini colori per le note */
+        .color-dot {
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.1); 
+            transition: transform 0.2s;
+        }
+        .color-dot:hover { 
+            transform: scale(1.2); 
         }
 
         /* --- MENU UTENTE DROPDOWN --- */
@@ -303,8 +319,8 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <button onclick="saveItineraryCheck()" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center gap-2">
-                <i class="fas fa-save"></i> <span>SALVA</span>
+            <button onclick="saveItineraryCheck()" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center gap-2 shadow-sm">
+                <i class="fas fa-save"></i> <span>SALVA VIAGGIO</span>
             </button>
             
             <div class="relative">
@@ -347,10 +363,6 @@
                             <i class="fas fa-file-pdf text-red-500"></i> <span>Scarica PDF</span>
                         </div>
 
-                        <div class="menu-item" onclick="saveItineraryCheck()">
-                            <i class="fas fa-save text-orange-500"></i> <span>Salva Modifiche</span>
-                        </div>
-
                         <div class="my-1 border-t border-gray-100"></div>
 
                         <a href="/logout" class="menu-item text-red-600 hover:bg-red-50">
@@ -365,6 +377,7 @@
     <div class="flex flex-1 overflow-hidden">
         
         <aside class="w-[360px] bg-white border-r border-gray-200 flex flex-col z-20 shadow-xl shrink-0 h-full">
+            
             <div class="flex-shrink-0">
                 <div class="p-4 space-y-3 border-b border-dashed border-gray-200">
                     
@@ -443,6 +456,7 @@
             <div class="p-3 bg-white border-b flex justify-between items-center z-10">
                 <span class="text-xs font-bold text-slate-700 uppercase" data-lang="itinerary">ITINERARIO</span>
             </div>
+            
             <div id="timeline-container" class="flex-1 overflow-y-auto p-4 space-y-3 relative z-0"></div>
         </main>
 
@@ -473,7 +487,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     
     <script>
-        // --- 1. SETUP BASE ---
+        // --- 1. CONFIGURAZIONE INIZIALE E VARIABILI GLOBALI ---
         const map = L.map('map', { preferCanvas: true, zoomControl: false }).setView([41.9028, 12.4964], 6);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB', maxZoom: 19 }).addTo(map);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -487,6 +501,7 @@
         let currentTripId = null; 
         let currentCityCoords = { lat: 41.9028, lon: 12.4964 };
 
+        // Impostazione date default (Oggi e Dopodomani)
         document.getElementById('startDate').valueAsDate = new Date();
         const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 2);
         document.getElementById('endDate').valueAsDate = tomorrow;
@@ -503,22 +518,46 @@
         // --- 2. GESTIONE NOTE (NUOVA FUNZIONE) ---
         function addNoteToDay(dayIndex) {
             const dayContent = document.getElementById(`day-content-${dayIndex}`);
-            if(dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(dayIndex);
+            // Se il giorno è chiuso, aprilo
+            if(dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) {
+                toggleDay(dayIndex);
+            }
             
             const card = document.createElement('div');
+            // Nota: Usiamo style inline per il colore iniziale, che verrà aggiornato
             card.className = `activity-card note-card in-timeline`;
+            card.style.backgroundColor = '#fef9c3'; // Giallo default
+            card.style.borderLeftColor = '#eab308'; // Giallo scuro default
+            
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <textarea class="note-input" placeholder="Scrivi una nota... (es. Prenotazione h 20:00)" rows="2"></textarea>
                     <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
                 </div>
-                <div class="mt-2 border-t border-yellow-200 pt-2 flex items-center gap-2">
-                    <i class="far fa-clock text-yellow-600 text-[10px]"></i>
+                <div class="mt-2 border-t border-black/5 pt-2 flex items-center gap-2">
+                    <i class="far fa-clock text-gray-400 text-[10px]"></i>
                     <input type="time" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
+                    
+                    <div class="flex gap-1 ml-auto">
+                        <div class="color-dot bg-yellow-200" onclick="changeNoteColor(this, '#fef9c3', '#eab308')"></div>
+                        <div class="color-dot bg-pink-200" onclick="changeNoteColor(this, '#fce7f3', '#db2777')"></div>
+                        <div class="color-dot bg-blue-200" onclick="changeNoteColor(this, '#dbeafe', '#2563eb')"></div>
+                        <div class="color-dot bg-green-200" onclick="changeNoteColor(this, '#dcfce7', '#16a34a')"></div>
+                    </div>
                 </div>
             `;
             dayContent.appendChild(card);
             updateCount();
+        }
+
+        // Funzione per cambiare colore alla nota al volo
+        function changeNoteColor(dot, bg, border) {
+            const card = dot.closest('.note-card');
+            card.style.backgroundColor = bg;
+            card.style.borderLeftColor = border;
+            // Aggiorna anche il bordo dell'input tempo per coerenza estetica
+            const timeInput = card.querySelector('input[type="time"]');
+            if(timeInput) timeInput.style.borderColor = border;
         }
 
         // --- 3. RICERCA ONLINE SPECIFICA ---
@@ -539,7 +578,7 @@
                     // Aggiungi i risultati trovati alla lista esistente
                     data.places.forEach(p => {
                         p.category = normalizeCategory(p.category);
-                        // Evita duplicati
+                        // Evita duplicati controllando l'ID
                         if(!allLoadedPlaces.find(x => String(x.id) === String(p.id))) {
                             allLoadedPlaces.push(p);
                         }
@@ -558,17 +597,21 @@
         function toggleUserMenu() {
             document.getElementById('user-dropdown').classList.toggle('open');
         }
+        
+        // Chiudi dropdown se clicco fuori
         document.addEventListener('click', (e) => {
             const dropdown = document.getElementById('user-dropdown');
             const btn = e.target.closest('button');
             if (!btn && !e.target.closest('#user-dropdown')) dropdown.classList.remove('open');
         });
 
-        // --- 5. AUTO-LOAD DEL VIAGGIO (CON ORARI E NOTE) ---
+        // --- 5. CARICAMENTO DATI (AUTO-LOAD) ---
+        // Questa funzione parte appena la pagina è caricata
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tripId = urlParams.get('tripId');
             
+            // Se c'è un ID nell'URL, carichiamo quel viaggio
             if(tripId) {
                 document.getElementById('loading').classList.remove('hidden');
                 try {
@@ -578,6 +621,8 @@
                     if(json.success && json.data) {
                         const saved = json.data;
                         currentTripId = saved.id;
+                        
+                        // Ripristina campi input
                         document.getElementById('tripTitle').value = saved.title || ""; 
                         document.getElementById('destination').value = saved.destination;
                         document.getElementById('startDate').value = saved.startDate;
@@ -593,34 +638,46 @@
                                 const dayContent = document.getElementById(`day-content-${index}`);
                                 if(dayContent) {
                                     dayItems.forEach(item => {
-                                        // Gestione Note
-                                        if (item.type === 'note') {
+                                        const type = item.type || 'place';
+                                        const time = item.time || '';
+
+                                        if (type === 'note') {
+                                            // Ricrea Nota Salvata
                                             const card = document.createElement('div');
                                             card.className = `activity-card note-card in-timeline`;
+                                            // Ripristina colori salvati
+                                            card.style.backgroundColor = item.bg || '#fef9c3';
+                                            card.style.borderLeftColor = item.border || '#eab308';
+                                            
                                             card.innerHTML = `
                                                 <div class="flex justify-between items-start">
                                                     <textarea class="note-input" rows="2">${item.text}</textarea>
                                                     <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
                                                 </div>
-                                                <div class="mt-2 border-t border-yellow-200 pt-2 flex items-center gap-2">
-                                                    <i class="far fa-clock text-yellow-600 text-[10px]"></i>
-                                                    <input type="time" value="${item.time || ''}" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
+                                                <div class="mt-2 border-t border-black/5 pt-2 flex items-center gap-2">
+                                                    <i class="far fa-clock text-gray-400 text-[10px]"></i>
+                                                    <input type="time" value="${time}" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
+                                                    <div class="flex gap-1 ml-auto">
+                                                        <div class="color-dot bg-yellow-200" onclick="changeNoteColor(this, '#fef9c3', '#eab308')"></div>
+                                                        <div class="color-dot bg-pink-200" onclick="changeNoteColor(this, '#fce7f3', '#db2777')"></div>
+                                                        <div class="color-dot bg-blue-200" onclick="changeNoteColor(this, '#dbeafe', '#2563eb')"></div>
+                                                        <div class="color-dot bg-green-200" onclick="changeNoteColor(this, '#dcfce7', '#16a34a')"></div>
+                                                    </div>
                                                 </div>`;
                                             dayContent.appendChild(card);
-                                        } 
-                                        // Gestione Luoghi
-                                        else {
+                                        } else {
+                                            // Ricrea Luogo Salvato
                                             const placeId = item.id || item;
-                                            const placeTime = item.time || '';
-                                            
                                             const place = allLoadedPlaces.find(p => String(p.id) === String(placeId));
+                                            
                                             if (place) {
-                                                const card = createCard(place, true, placeTime);
+                                                const card = createCard(place, true, time);
                                                 dayContent.appendChild(card);
                                                 markAsAdded(placeId);
                                             }
                                         }
                                     });
+                                    // Se il giorno ha cose dentro, aprilo
                                     if(dayItems.length > 0) toggleDay(index);
                                 }
                             });
@@ -667,9 +724,11 @@
             document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
         }
 
-        // --- 7. SALVATAGGIO SMART (INCLUDE NOTE E ORARI) ---
+        // --- 7. SALVATAGGIO COMPLETO (Luoghi + Note + Colori + Orari) ---
         async function saveItineraryCheck() {
             const schedule = [];
+            
+            // Scansiona ogni giorno
             document.querySelectorAll('.day-slot').forEach(slot => {
                 const dayItems = [];
                 slot.querySelectorAll('.activity-card').forEach(card => {
@@ -677,9 +736,13 @@
                     const timeVal = timeInput ? timeInput.value : '';
 
                     if (card.classList.contains('note-card')) {
+                        // Salva Nota con colori personalizzati
                         const text = card.querySelector('textarea').value;
-                        dayItems.push({ type: 'note', text: text, time: timeVal });
+                        const bg = card.style.backgroundColor;
+                        const border = card.style.borderLeftColor;
+                        dayItems.push({ type: 'note', text: text, time: timeVal, bg: bg, border: border });
                     } else {
+                        // Salva Luogo
                         dayItems.push({ type: 'place', id: card.dataset.id, time: timeVal });
                     }
                 });
@@ -689,6 +752,7 @@
             const tripTitle = document.getElementById('tripTitle').value.trim() || document.getElementById('destination').value;
             let overwrite = false;
 
+            // Chiedi conferma sovrascrittura se stiamo modificando
             if (currentTripId) {
                 if (confirm(`Vuoi sovrascrivere "${tripTitle}"?\nOK = Sì (Sovrascrivi)\nAnnulla = No (Salva Copia)`)) overwrite = true;
             }
@@ -717,12 +781,13 @@
             } catch(e) { alert("Errore di connessione."); }
         }
 
-        // --- 8. PDF GENERATOR ---
+        // --- 8. GENERATORE PDF PRO (Include Note Colorate) ---
         function downloadPDF() {
             const title = document.getElementById('tripTitle').value || "Mio Viaggio";
             const dest = document.getElementById('destination').value;
             const container = document.getElementById('pdf-template');
             
+            // Costruisce un HTML pulito specifico per la stampa
             let html = `
                 <div style="padding: 40px; font-family: sans-serif;">
                     <h1 style="color: #6366f1; font-size: 28px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">${title}</h1>
@@ -745,9 +810,13 @@
                         const timeStr = time ? `<b>${time}</b> ` : '';
 
                         if (card.classList.contains('note-card')) {
+                            // Renderizza Nota nel PDF con il suo colore
                             const text = card.querySelector('textarea').value;
-                            html += `<li style="background:#fef9c3; padding:10px; margin-bottom:5px; border-left:4px solid #eab308; font-style:italic;">${timeStr} ${text}</li>`;
+                            const bg = card.style.backgroundColor || '#fef9c3';
+                            const border = card.style.borderLeftColor || '#eab308';
+                            html += `<li style="background:${bg}; padding:10px; margin-bottom:5px; border-left:4px solid ${border}; font-style:italic;">${timeStr} ${text}</li>`;
                         } else {
+                            // Renderizza Luogo nel PDF
                             const name = card.querySelector('h4').innerText.replace('🔥','');
                             const cat = card.querySelector('span.uppercase').innerText;
                             const color = card.style.borderLeftColor;
@@ -771,7 +840,7 @@
             }).from(container).save().then(() => { container.style.display = 'none'; });
         }
 
-        // --- 9. FUNZIONI CORE STANDARD ---
+        // --- 9. FUNZIONI UI STANDARD (Mood, Autocomplete, Marker) ---
         
         window.setMood = function(mood, cardElement) {
             document.getElementById('searchMood').value = mood;
@@ -926,13 +995,11 @@
             allLoadedPlaces.forEach((place, index) => {
                 const cat = place.category;
                 if (!filters[cat]) return; 
-                // Filtro locale solo se non sto premendo invio
                 if (searchTerm && !place.name.toLowerCase().includes(searchTerm)) return;
 
                 visibleCount++;
                 drawMarker(place);
                 
-                // Crea card, nascondi se già aggiunta
                 const card = createCard(place, false);
                 if(card.style.display !== 'none') {
                     card.style.animationDelay = `${Math.min(index * 0.05, 1)}s`;
@@ -1080,7 +1147,7 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <button onclick="event.stopPropagation(); addNoteToDay(${i})" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs transition" title="Aggiungi Nota"><i class="fas fa-sticky-note"></i> +</button>
-                                <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wide">0 stop</span>
+                                <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase">0 stop</span>
                             </div>
                         </div>
                         <div id="day-content-${i}" class="day-slot min-h-[80px] p-3 space-y-2 bg-slate-50/50">
@@ -1129,6 +1196,18 @@
                     onRemove: updateCount, onEnd: updateCount
                 });
             });
+        }
+        
+        function shareItinerary() {
+            let text = `🌍 ${document.getElementById('tripTitle').value || 'Mio Viaggio'} a ${document.getElementById('destination').value}:\n\n`;
+            document.querySelectorAll('.day-slot').forEach((slot, index) => {
+                if(slot.children.length > 0) {
+                    text += `📅 Giorno ${index + 1}:\n`;
+                    slot.querySelectorAll('.activity-card h4').forEach(h4 => text += ` - ${h4.innerText.replace('🔥', '')}\n`);
+                    text += '\n';
+                }
+            });
+            navigator.clipboard.writeText(text).then(() => alert("Copiato negli appunti!"));
         }
     </script>
 </body>
