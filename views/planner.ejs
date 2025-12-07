@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WayFinder Ultimate Planner</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -25,32 +26,41 @@
         body { background-color: #f3f4f6; }
         #map { height: 100%; width: 100%; border-radius: 1rem; z-index: 1; }
         .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .activity-card { background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid #f1f5f9; border-left-width: 5px; transition: all 0.2s; position: relative; cursor: grab; }
+        /* CARD ATTIVITÀ (I LUOGHI) */
+        .activity-card {
+            background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; border-left-width: 5px; 
+            transition: all 0.2s; position: relative; cursor: grab;
+        }
         .activity-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .activity-card:active { cursor: grabbing; }
         .in-timeline { background: #f8fafc; border: 1px solid #e2e8f0; border-left-width: 5px; }
 
+        /* CARD NOTE */
         .note-card { transition: background-color 0.3s, border-left-color 0.3s; }
         .note-input { background: transparent; border: none; outline: none; width: 100%; font-size: 0.85rem; color: #4b5563; font-style: italic; resize: none; }
         .color-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); transition: transform 0.2s; }
         .color-dot:hover { transform: scale(1.2); }
 
+        /* MENU UTENTE */
         #user-dropdown { transform-origin: top right; transition: all 0.2s ease-out; opacity: 0; transform: scale(0.95); pointer-events: none; border: 1px solid #e2e8f0; }
         #user-dropdown.open { opacity: 1; transform: scale(1); pointer-events: auto; }
         .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 14px; color: #475569; transition: all 0.15s; cursor: pointer !important; }
         .menu-item:hover { background-color: #f8fafc; color: #6366f1; }
 
+        /* MOOD e FILTRI */
         .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
         .mood-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
         .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
         .mood-card.selected { border-color: #6366f1; background: #e0e7ff; color: #4338ca; box-shadow: 0 0 0 2px #c7d2fe; }
-        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
-        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-
+        
         .filter-chip { font-size: 0.7rem; padding: 5px 10px; border-radius: 20px; background: white; border: 1px solid #e5e7eb; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
         .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
         .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
@@ -109,7 +119,7 @@
                             <span class="flex-1">Condividi Viaggio</span>
                             <i class="fas fa-chevron-right text-[10px] ml-auto"></i>
                             
-                            <div id="social-share-menu" class="absolute left-full top-0 w-48 bg-white rounded-xl shadow-xl z-50 py-2 border border-gray-100 hidden ml-2">
+                            <div id="social-share-menu" class="absolute right-full top-0 w-48 bg-white rounded-xl shadow-xl z-50 py-2 border border-gray-100 hidden mr-2">
                                 <div class="menu-item" onclick="shareLink('whatsapp', event)">
                                     <i class="fab fa-whatsapp text-green-500"></i> WhatsApp
                                 </div>
@@ -121,6 +131,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="menu-item group relative" onclick="toggleLanguage()">
                             <i class="fas fa-globe text-blue-500"></i> <span class="flex-1">Lingua / Language</span>
                             <span id="currentLangDisplay" class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">IT</span>
@@ -283,7 +294,8 @@
             document.querySelectorAll('.day-slot').forEach(slot => {
                 const dayItems = [];
                 slot.querySelectorAll('.activity-card').forEach(card => {
-                    const timeVal = card.querySelector('input[type="time"]')?.value || '';
+                    const timeInput = card.querySelector('input[type="time"]');
+                    const timeVal = timeInput ? timeInput.value : '';
 
                     if (card.classList.contains('note-card')) {
                         const text = card.querySelector('textarea').value;
@@ -427,26 +439,6 @@
         }
 
         // --- FUNZIONI CORE STANDARD ---
-        function toggleSocialShare(event) {
-            event.stopPropagation();
-            document.getElementById('social-share-menu').classList.toggle('hidden');
-        }
-
-        function shareLink(platform, event) {
-            event.stopPropagation();
-            if (!currentTripId) { alert("Devi prima salvare l'itinerario per poterlo condividere!"); return; }
-            const appURL = window.location.origin;
-            const tripLink = `${appURL}/planner?tripId=${currentTripId}`;
-            const tripTitle = document.getElementById('tripTitle').value || document.getElementById('destination').value;
-            const message = `Guarda il mio itinerario di viaggio per *${tripTitle}* su WayFinder! ✈️ Apri il link: ${tripLink}`;
-            let shareUrl = '';
-            if (platform === 'whatsapp') { shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; }
-            else if (platform === 'telegram') { shareUrl = `https://t.me/share/url?text=${encodeURIComponent(message)}&url=${encodeURIComponent(tripLink)}`; }
-            else if (platform === 'sms') { shareUrl = `sms:?body=${encodeURIComponent(message)}`; } 
-            if (shareUrl) { window.open(shareUrl, '_blank'); }
-            document.getElementById('social-share-menu').classList.add('hidden');
-        }
-        
         function toggleUserMenu() { document.getElementById('user-dropdown').classList.toggle('open'); }
         document.addEventListener('click', (e) => {
             const dropdown = document.getElementById('user-dropdown');
@@ -559,7 +551,8 @@
             document.getElementById('loading').classList.remove('hidden');
             
             tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
-            addedPlaces.clear(); 
+            // Non resettiamo currentTripId/allLoadedPlaces qui per preservare lo stato del carrello
+            
             configureFiltersByMood(mood);
 
             try {
@@ -574,7 +567,13 @@
                 const { lat, lon } = data.destinationCoords;
                 map.setView([lat, lon], 13);
                 
-                allLoadedPlaces = data.places.map(p => ({ ...p, category: normalizeCategory(p.category) }));
+                // AGGIUNGIAMO i nuovi luoghi all'array esistente
+                data.places.forEach(p => {
+                    p.category = normalizeCategory(p.category);
+                    if (!allLoadedPlaces.some(existing => existing.id === p.id)) {
+                        allLoadedPlaces.push(p);
+                    }
+                });
                 allLoadedPlaces.sort((a, b) => b.score - a.score);
                 
                 renderApp();
@@ -767,6 +766,32 @@
             });
         }
         
+        // --- MULTILINGUA ---
+        const translations = {
+            it: { save: "Salva", mood: "Scegli il tuo stile", culture: "Cultura", food: "Gourmet", party: "Party", relax: "Relax", find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "ITINERARIO" },
+            en: { save: "Save", mood: "Choose your mood", culture: "Culture", food: "Gourmet", party: "Party", relax: "Relax", find: "FIND PLACES", start: "Start Searching", itinerary: "ITINERARY" }
+        };
+
+        function toggleLanguage() {
+            const select = document.getElementById('langSelect');
+            select.value = select.value === 'it' ? 'en' : 'it';
+            changeLanguage();
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('currentLangDisplay').innerText = lang.toUpperCase();
+            const t = translations[lang];
+            
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (t[key]) el.innerText = t[key];
+            });
+            document.getElementById('destination').placeholder = lang === 'it' ? "Dove vuoi andare?" : "Where do you want to go?";
+            document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
+        }
+
+        // --- SHARED UTILS ---
         function toggleSocialShare(event) {
             event.stopPropagation();
             document.getElementById('social-share-menu').classList.toggle('hidden');
@@ -785,11 +810,6 @@
             else if (platform === 'sms') { shareUrl = `sms:?body=${encodeURIComponent(message)}`; } 
             if (shareUrl) { window.open(shareUrl, '_blank'); }
             document.getElementById('social-share-menu').classList.add('hidden');
-        }
-
-        function shareItinerary() {
-            // Placeholder: Mostra il menu sociale come richiesto, dato che la condivisione diretta non è più usata
-            toggleSocialShare(event);
         }
     </script>
 </body>
