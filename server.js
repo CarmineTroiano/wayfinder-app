@@ -1,15 +1,28 @@
-require('dotenv').config(); // Per gestire le chiavi segrete online
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose'); // Il database manager
-const MongoStore = require('connect-mongo'); // Per salvare le sessioni nel DB
+const mongoose = require('mongoose');
+
+// --- FIX IMPORTAZIONE ROBUSTA ---
+const connectMongo = require('connect-mongo');
+let MongoStore;
+
+if (connectMongo.default) {
+    MongoStore = connectMongo.default; // Gestisce la versione nuova (ESM)
+} else {
+    MongoStore = connectMongo; // Gestisce la versione standard
+}
+
+// Debug per vedere su Render cosa sta succedendo
+console.log("DEBUG MONGOSTORE:", MongoStore); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// ... (Il resto del file rimane uguale)
 
 // --- CONNESSIONE DATABASE ---
 // Se siamo online usa la variabile d'ambiente, altrimenti la stringa locale (o inseriscila qui per test)
