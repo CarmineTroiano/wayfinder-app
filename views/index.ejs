@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>WayFinder AI - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen text-white">
+    <div class="bg-white text-gray-800 p-10 rounded-2xl shadow-2xl w-full max-w-md text-center">
+        <h1 class="text-4xl font-bold mb-2 text-indigo-600">WayFinder AI</h1>
+        <p class="text-gray-500 mb-8">Il tuo architetto di viaggi intelligente.</p>
+        
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-left text-sm font-bold mb-1">Come ti chiami?</label>
+                <input type="text" name="username" required 
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                       placeholder="Es. Steve">
+            </div>
+            <button type="submit" 
+                    class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-300">
+                Inizia l'Avventura
+            </button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizza Viaggio - WayFinder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>body{font-family:'Poppins',sans-serif;background:#f3f4f6;} #map{height:100%;width:100%;border-radius:1rem;} .activity-card{background:white;border-radius:10px;padding:12px;margin-bottom:8px;border-left-width:5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);} .in-timeline{border:1px solid #e5e7eb;} .map-overlay{z-index:1000;} #pdf-template-viewer { display: none; }</style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <nav class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <a href="/my-trips" class="text-gray-400 hover:text-indigo-600 transition"><i class="fas fa-arrow-left"></i> Torna</a>
+            <div class="h-6 w-px bg-gray-200 mx-2"></div>
+            <h1 class="text-xl font-bold text-slate-800"><%= trip.title %></h1>
+            <span class="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-bold uppercase"><%= trip.destination %></span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="downloadPDFViewer()" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-200 transition">
+                <i class="fas fa-file-pdf mr-1"></i> PDF
+            </button>
+            <a href="/planner?tripId=<%= trip.id %>" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition">Modifica</a>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        <div class="w-1/3 bg-white border-r border-gray-200 overflow-y-auto p-6 space-y-6" id="viewer-content">
+            <% 
+                function getDates(start, end) { let arr = []; let dt = new Date(start); const ed = new Date(end); while(dt <= ed){ arr.push(new Date(dt)); dt.setDate(dt.getDate()+1); } return arr; }
+                const dates = getDates(trip.startDate, trip.endDate);
+            %>
+            <% dates.forEach((date, index) => { %>
+                <div class="day-group">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs"><%= index + 1 %></div>
+                        <h3 class="font-bold text-slate-700 capitalize"><%= date.toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long'}) %></h3>
+                    </div>
+                    <div class="pl-4 border-l-2 border-indigo-50 space-y-3 pb-4 day-cards">
+                        <% if (trip.data.schedule && trip.data.schedule[index]) { %>
+                            <% trip.data.schedule[index].forEach(item => { 
+                                const pid = typeof item==='object'?item.id:item; 
+                                const ptime = typeof item==='object'?item.time:'';
+                                const place = trip.data.places.find(p=>String(p.id)===String(pid));
+                                if(place){
+                                    let color='#ccc';
+                                    if(place.category.toLowerCase().includes('cultura'))color='#8b5cf6';
+                                    else if(place.category.toLowerCase().includes('cibo'))color='#f97316';
+                                    else if(place.category.toLowerCase().includes('party'))color='#ef4444';
+                                    else if(place.category.toLowerCase().includes('relax'))color='#10b981';
+                                    else color='#3b82f6';
+                            %>
+                                <div class="activity-card" style="border-left-color: <%= color %>">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="font-bold text-sm text-slate-800"><%= place.name %></h4>
+                                        <% if(ptime) { %><span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 rounded"><%= ptime %></span><% } %>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1 truncate"><%= place.description %></p>
+                                </div>
+                            <% }}) %>
+                        <% } %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+
+        <div class="flex-1 relative">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div id="pdf-template-viewer"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // PDF GENERATOR
+        function downloadPDFViewer() {
+            const title = "<%= trip.title %>";
+            const container = document.getElementById('pdf-template-viewer');
+            
+            let html = `<div style="padding:40px; font-family:sans-serif;">
+                <h1 style="color:#6366f1; font-size:28px; border-bottom:2px solid #ccc; padding-bottom:10px;">${title}</h1>
+                <div style="margin-top:30px;">`;
+            
+            // Ricostruiamo l'HTML pulito dal DOM
+            document.querySelectorAll('.day-group').forEach(group => {
+                const dayHeader = group.querySelector('h3').innerText;
+                const cards = group.querySelectorAll('.activity-card');
+                
+                if(cards.length > 0) {
+                    html += `<h3 style="margin-top:25px; color:#333; font-size:18px; background:#f3f4f6; padding:5px 10px;">${dayHeader}</h3><ul style="list-style:none; padding:0;">`;
+                    cards.forEach(card => {
+                        const name = card.querySelector('h4').innerText;
+                        const time = card.querySelector('span.bg-indigo-50')?.innerText || '';
+                        const color = card.style.borderLeftColor;
+                        html += `<li style="border-left:5px solid ${color}; padding:10px; margin-bottom:8px; background:#fff; border:1px solid #eee; border-left-color:${color};">
+                            <strong>${time ? time + ' - ' : ''}${name}</strong>
+                        </li>`;
+                    });
+                    html += `</ul>`;
+                }
+            });
+            html += `</div></div>`;
+            
+            container.innerHTML = html;
+            container.style.display = 'block';
+            
+            html2pdf().set({
+                margin: 10, filename: `${title.replace(/\s+/g,'_')}.pdf`,
+                image: {type:'jpeg', quality:0.98}, html2canvas: {scale: 2}, jsPDF: {unit:'mm', format:'a4'}
+            }).from(container).save().then(() => { container.style.display = 'none'; });
+        }
+
+        const tripData = <%- JSON.stringify(trip.data) %>;
+        const map = L.map('map').setView([41.9, 12.5], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OSM' }).addTo(map);
+
+        const bounds = [];
+        const addedIds = new Set();
+        if(tripData.schedule) tripData.schedule.forEach(d => d.forEach(i => addedIds.add(String(typeof i==='object'?i.id:i))));
+        
+        tripData.places.forEach(p => {
+            if(addedIds.has(String(p.id))){
+                let color='#ccc';
+                if(p.category.toLowerCase().includes('cultura'))color='#8b5cf6';
+                else if(p.category.toLowerCase().includes('cibo'))color='#f97316';
+                else if(p.category.toLowerCase().includes('party'))color='#ef4444';
+                else if(p.category.toLowerCase().includes('relax'))color='#10b981';
+                else color='#3b82f6';
+                
+                const m = L.circleMarker([p.lat, p.lng], {radius:8, fillColor:color, color:'#fff', weight:2, fillOpacity:1}).addTo(map);
+                m.bindPopup(p.name);
+                bounds.push([p.lat, p.lng]);
+            }
+        });
+        if(bounds.length>0) map.fitBounds(bounds, {padding:[50,50]});
+    </script>
+</body>
+</html>

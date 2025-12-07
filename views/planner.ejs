@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>WayFinder Ultimate</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        primary: '#6366f1', // Indigo 500
+                        secondary: '#ec4899', // Pink 500
+                        accent: '#8b5cf6', // Violet 500
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f3f4f6; }
+        
+        /* Mappa */
+        .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
+        #map { height: 100%; width: 100%; border-radius: 1rem; z-index: 1; }
+        
+        /* Scrollbar personalizzata */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Card Attività */
+        .activity-card {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
+            border-left-width: 5px; 
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            cursor: grab;
+        }
+        .activity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .activity-card:active { cursor: grabbing; }
+
+        /* Stile Card quando è nella Timeline */
+        .in-timeline {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left-width: 5px; 
+        }
+
+        /* Menu Utente Dropdown */
+        #user-dropdown {
+            transform-origin: top right; 
+            transition: all 0.2s ease-out;
+            opacity: 0; 
+            transform: scale(0.95); 
+            pointer-events: none;
+            border: 1px solid #e2e8f0;
+        }
+        #user-dropdown.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+        
+        .menu-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            font-size: 14px; 
+            color: #475569; 
+            transition: all 0.15s; 
+            cursor: pointer !important; 
+        }
+        .menu-item:hover { background-color: #f8fafc; color: #6366f1; }
+        .menu-item i { width: 20px; text-align: center; }
+
+        /* Mood Cards */
+        .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .mood-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
+        .mood-card.selected {
+            border-color: #6366f1;
+            background: #e0e7ff;
+            color: #4338ca;
+            box-shadow: 0 0 0 2px #c7d2fe;
+        }
+        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+
+        /* Filtri Chips */
+        .filter-chip {
+            font-size: 0.7rem; padding: 5px 10px; border-radius: 20px;
+            background: white; border: 1px solid #e5e7eb;
+            color: #64748b; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+        .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
+        .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
+        .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+        .filter-chip.active-relax { background: #dcfce7; border-color: #86efac; color: #15803d; }
+        .filter-chip.active-attrazione { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+
+        /* Autocomplete Lista */
+        #autocomplete-list {
+            position: absolute; top: 110%; left: 0; right: 0;
+            background: white; border-radius: 12px; z-index: 50;
+            max-height: 220px; overflow-y: auto;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            display: none; border: 1px solid #f3f4f6;
+        }
+        .suggestion-item { padding: 10px 15px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        .suggestion-item:hover { background-color: #f8fafc; color: #6366f1; }
+
+        /* Bottone Elimina */
+        .delete-btn {
+            position: absolute; top: -6px; right: -6px;
+            background: #ef4444; color: white;
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; cursor: pointer; opacity: 0; 
+            transition: all 0.2s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+            z-index: 20; transform: scale(0.8);
+        }
+        .activity-card:hover .delete-btn { opacity: 1; top: 5px; right: 5px; transform: scale(1); }
+
+        /* Animazioni */
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .chevron-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .map-legend { font-family: 'Poppins', sans-serif; font-size: 10px; line-height: 1.5; color: #334155; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        
+        /* Template PDF Nascosto */
+        #pdf-template { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col font-sans overflow-hidden text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm px-5 py-3 flex justify-between items-center z-30 shrink-0 sticky top-0 relative">
+        <div class="flex items-center gap-3 text-primary">
+            <div class="bg-gradient-to-tr from-primary to-accent text-white p-1.5 rounded-lg shadow-lg shadow-indigo-200">
+                <i class="fas fa-paper-plane text-base"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight leading-none text-slate-800">WayFinder</h1>
+                <p class="text-[9px] text-slate-400 font-medium tracking-wide">ULTIMATE EDITION</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button onclick="saveItineraryCheck()" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center gap-2">
+                <i class="fas fa-save"></i> <span>SALVA</span>
+            </button>
+            
+            <div class="relative">
+                <button onclick="toggleUserMenu()" class="flex items-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-full transition shadow-sm cursor-pointer">
+                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
+                        <%= user.charAt(0).toUpperCase() %>
+                    </div>
+                    <span class="text-sm font-semibold text-slate-600 hidden sm:block"><%= user %></span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+
+                <div id="user-dropdown" class="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl z-50">
+                    <div class="px-5 py-3 border-b border-gray-50 bg-gray-50/50 rounded-t-xl">
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wide mb-1">Account</p>
+                        <p class="text-sm font-bold text-gray-800 truncate"><%= user %></p>
+                    </div>
+
+                    <div class="py-2">
+                        <div class="menu-item" onclick="window.location.href='/my-trips'">
+                            <i class="fas fa-suitcase text-indigo-500"></i> <span>I miei Viaggi</span>
+                        </div>
+                        
+                        <div class="menu-item group relative" onclick="toggleLanguage()">
+                            <i class="fas fa-globe text-blue-500"></i> 
+                            <span class="flex-1">Lingua / Language</span>
+                            <span id="currentLangDisplay" class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">IT</span>
+                            <select id="langSelect" onchange="changeLanguage()" class="hidden">
+                                <option value="it">IT</option>
+                                <option value="en">EN</option>
+                            </select>
+                        </div>
+
+                        <div class="my-1 border-t border-gray-100"></div>
+
+                        <div class="menu-item" onclick="shareItinerary()">
+                            <i class="fas fa-share-alt text-green-500"></i> <span>Condividi</span>
+                        </div>
+                        
+                        <div class="menu-item" onclick="downloadPDF()">
+                            <i class="fas fa-file-pdf text-red-500"></i> <span>Scarica PDF</span>
+                        </div>
+
+                        <div class="my-1 border-t border-gray-100"></div>
+
+                        <a href="/logout" class="menu-item text-red-600 hover:bg-red-50">
+                            <i class="fas fa-sign-out-alt"></i> <span>Esci</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <aside class="w-[360px] bg-white border-r border-gray-200 flex flex-col z-20 shadow-xl shrink-0 h-full">
+            <div class="flex-shrink-0">
+                <div class="p-4 space-y-3 border-b border-dashed border-gray-200">
+                    
+                    <div class="relative">
+                        <i class="fas fa-heading absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                        <input type="text" id="tripTitle" placeholder="Nome del viaggio (es. Weekend a Roma)" 
+                            class="w-full pl-9 p-2 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all placeholder:text-indigo-300">
+                    </div>
+
+                    <div class="relative group">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                        <input type="text" id="destination" autocomplete="off" placeholder="Dove vuoi andare?" 
+                            class="w-full pl-9 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400">
+                        <div id="autocomplete-list"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="startDate" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 focus:border-primary outline-none">
+                        <input type="date" id="endDate" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 focus:border-primary outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[9px] uppercase font-bold text-slate-400 mb-1.5 ml-1 tracking-wider" data-lang="mood">Scegli il tuo stile</label>
+                        <input type="hidden" id="searchMood" value="culturale">
+                        <div class="mood-grid">
+                            <div class="mood-card selected" onclick="setMood('culturale', this)">
+                                <span class="mood-icon">🏛️</span><span class="mood-label" data-lang="culture">Cultura</span>
+                            </div>
+                            <div class="mood-card" onclick="setMood('gastronomico', this)">
+                                <span class="mood-icon">🍝</span><span class="mood-label" data-lang="food">Gourmet</span>
+                            </div>
+                            <div class="mood-card" onclick="setMood('divertimento', this)">
+                                <span class="mood-icon">🍸</span><span class="mood-label" data-lang="party">Party</span>
+                            </div>
+                            <div class="mood-card" onclick="setMood('relax', this)">
+                                <span class="mood-icon">🍃</span><span class="mood-label" data-lang="relax">Relax</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="startPlanning()" class="w-full bg-gradient-to-r from-primary to-accent hover:from-indigo-600 hover:to-violet-600 text-white py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 flex justify-center items-center gap-2">
+                        <span data-lang="find">TROVA LUOGHI</span> <i class="fas fa-magic"></i>
+                    </button>
+                </div>
+
+                <div class="px-4 py-2 bg-slate-50/50 border-b border-gray-200">
+                    <div class="relative mb-2">
+                        <input type="text" id="localSearch" onkeyup="if(event.key === 'Enter') searchOnline(); else filterBySearchTerm();" 
+                            placeholder="Cerca qui o premi Invio per cercare online..." 
+                            class="w-full pl-2 pr-6 p-1 bg-transparent border-b border-slate-300 text-xs focus:border-primary outline-none transition-colors">
+                        <i class="fas fa-filter absolute right-1 top-1.5 text-slate-400 text-[10px]"></i>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 justify-center">
+                        <button id="chip-culturale" onclick="toggleFilter('culturale')" class="filter-chip active-culturale"><i class="fas fa-landmark"></i></button>
+                        <button id="chip-attrazione" onclick="toggleFilter('attrazione')" class="filter-chip active-attrazione"><i class="fas fa-map-pin"></i></button>
+                        <button id="chip-gastronomico" onclick="toggleFilter('gastronomico')" class="filter-chip"><i class="fas fa-utensils"></i></button>
+                        <button id="chip-divertimento" onclick="toggleFilter('divertimento')" class="filter-chip"><i class="fas fa-cocktail"></i></button>
+                        <button id="chip-relax" onclick="toggleFilter('relax')" class="filter-chip"><i class="fas fa-tree"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50" id="scroll-container">
+                <div id="suggestions-pool" class="space-y-2 pb-10">
+                    <div class="flex flex-col items-center justify-center h-full pt-10 text-slate-300">
+                        <div class="bg-white p-3 rounded-full shadow-sm mb-2">
+                            <i class="fas fa-globe-europe text-2xl text-indigo-100"></i>
+                        </div>
+                        <p class="text-[10px] font-medium uppercase tracking-wide" data-lang="start">Inizia la ricerca</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 bg-slate-100 flex flex-col min-w-[380px] border-r border-gray-200 relative">
+            <div class="p-3 bg-white border-b flex justify-between items-center z-10">
+                <span class="text-xs font-bold text-slate-700 uppercase">ITINERARIO</span>
+            </div>
+            <div id="timeline-container" class="flex-1 overflow-y-auto p-4 space-y-3 relative z-0"></div>
+        </main>
+
+        <div class="w-[45%] relative group shadow-inner">
+            <div id="map" class="z-0 h-full w-full"></div>
+            
+            <div class="absolute bottom-5 right-5 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-xl z-[1000] border border-white/50 w-32 map-legend">
+                <div class="font-bold text-slate-800 border-b border-slate-200 pb-1 mb-1 text-[10px] uppercase tracking-wide">LEGENDA</div>
+                <div class="flex items-center mb-1"><span class="legend-dot" style="background:#8b5cf6"></span> Cultura</div>
+                <div class="flex items-center mb-1"><span class="legend-dot" style="background:#3b82f6"></span> Attrazioni</div>
+                <div class="flex items-center mb-1"><span class="legend-dot" style="background:#f97316"></span> Cibo</div>
+                <div class="flex items-center mb-1"><span class="legend-dot" style="background:#ef4444"></span> Party</div>
+                <div class="flex items-center"><span class="legend-dot" style="background:#10b981"></span> Relax</div>
+            </div>
+
+            <div id="loading" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-[2000] flex flex-col items-center justify-center transition-opacity">
+                <div class="relative">
+                    <div class="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+                <p class="mt-3 font-bold text-xs text-slate-600 tracking-wide animate-pulse">CARICAMENTO...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-template"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+    
+    <script>
+        // --- 1. SETUP BASE ---
+        const map = L.map('map', { preferCanvas: true, zoomControl: false }).setView([41.9028, 12.4964], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB', maxZoom: 19 }).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        let markersGroup = L.layerGroup().addTo(map);
+        let allLoadedPlaces = []; 
+        let tripDays = [];
+        let markersMap = {}; 
+        let addedPlaces = new Set(); 
+        let filters = { top: false, culturale: true, attrazione: true, gastronomico: true, relax: true, divertimento: true };
+        let currentTripId = null; 
+        let currentCityCoords = { lat: 41.9028, lon: 12.4964 };
+
+        document.getElementById('startDate').valueAsDate = new Date();
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 2);
+        document.getElementById('endDate').valueAsDate = tomorrow;
+
+        const CAT_DATA = {
+            culturale: { icon: '🏛️', color: '#8b5cf6' },
+            attrazione: { icon: '📍', color: '#3b82f6' },
+            relax: { icon: '🌳', color: '#10b981' },
+            gastronomico: { icon: '🍴', color: '#f97316' },
+            divertimento: { icon: '🍸', color: '#ef4444' },
+            altro: { icon: '🔹', color: '#64748b' }
+        };
+
+        // --- 2. RICERCA ONLINE SPECIFICA ---
+        // Se non trovi il Colosseo, scrivilo e premi invio.
+        async function searchOnline() {
+            const query = document.getElementById('localSearch').value;
+            if(!query) return;
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                // Chiama la nuova API del server che fa una query specifica su OSM
+                const res = await fetch('/api/search-specific', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ query, lat: currentCityCoords.lat, lon: currentCityCoords.lon })
+                });
+                const data = await res.json();
+                
+                if(data.success && data.places.length > 0) {
+                    // Aggiungi i risultati trovati alla lista esistente
+                    data.places.forEach(p => {
+                        p.category = normalizeCategory(p.category);
+                        // Evita duplicati
+                        if(!allLoadedPlaces.find(x => String(x.id) === String(p.id))) {
+                            allLoadedPlaces.push(p);
+                        }
+                    });
+                    // Ridisegna la lista e avvisa l'utente
+                    renderApp();
+                    alert(`Trovati ${data.places.length} nuovi luoghi per "${query}"!`);
+                } else {
+                    alert("Nessun luogo trovato online con questo nome.");
+                }
+            } catch(e) { console.error(e); }
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // --- 3. MENU E UTENTE ---
+        function toggleUserMenu() {
+            document.getElementById('user-dropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('user-dropdown');
+            const btn = e.target.closest('button');
+            if (!btn && !e.target.closest('#user-dropdown')) dropdown.classList.remove('open');
+        });
+
+        // --- 4. AUTO-LOAD DEL VIAGGIO (CON ORARI) ---
+        window.onload = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tripId = urlParams.get('tripId');
+            
+            if(tripId) {
+                document.getElementById('loading').classList.remove('hidden');
+                try {
+                    const res = await fetch(`/api/get-trip/${tripId}`);
+                    const json = await res.json();
+                    
+                    if(json.success && json.data) {
+                        const saved = json.data;
+                        currentTripId = saved.id;
+                        document.getElementById('tripTitle').value = saved.title || ""; 
+                        document.getElementById('destination').value = saved.destination;
+                        document.getElementById('startDate').value = saved.startDate;
+                        document.getElementById('endDate').value = saved.endDate;
+                        setMood(saved.mood, document.querySelector(`.mood-card[onclick*="'${saved.mood}'"]`));
+
+                        allLoadedPlaces = saved.places;
+                        tripDays = generateDateSlots(saved.startDate, saved.endDate);
+                        
+                        // Ripristino Schedule con Orari
+                        if (saved.schedule) {
+                            saved.schedule.forEach((dayItems, index) => {
+                                const dayContent = document.getElementById(`day-content-${index}`);
+                                if(dayContent) {
+                                    dayItems.forEach(item => {
+                                        // Supporto sia per vecchio formato (ID stringa) sia nuovo (Oggetto {id, time})
+                                        const placeId = typeof item === 'object' ? item.id : item;
+                                        const placeTime = typeof item === 'object' ? item.time : '';
+                                        
+                                        const place = allLoadedPlaces.find(p => String(p.id) === String(placeId));
+                                        if (place) {
+                                            const card = createCard(place, true, placeTime);
+                                            dayContent.appendChild(card);
+                                            markAsAdded(placeId);
+                                        }
+                                    });
+                                    if(dayItems.length > 0) toggleDay(index);
+                                }
+                            });
+                        }
+                        
+                        renderApp();
+                        updateCount();
+                    } else {
+                        alert("Impossibile caricare il viaggio.");
+                    }
+                } catch(e) { console.error(e); }
+                document.getElementById('loading').classList.add('hidden');
+            }
+        };
+
+        // --- 5. MULTILINGUA ---
+        const translations = {
+            it: {
+                save: "Salva", mood: "Scegli il tuo stile", culture: "Cultura", food: "Gourmet", party: "Party", relax: "Relax",
+                find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "Il tuo Itinerario"
+            },
+            en: {
+                save: "Save", mood: "Choose your mood", culture: "Culture", food: "Gourmet", party: "Party", relax: "Relax",
+                find: "FIND PLACES", start: "Start Searching", itinerary: "Your Itinerary"
+            }
+        };
+
+        function toggleLanguage() {
+            const select = document.getElementById('langSelect');
+            select.value = select.value === 'it' ? 'en' : 'it';
+            changeLanguage();
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('currentLangDisplay').innerText = lang.toUpperCase();
+            const t = translations[lang];
+            
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (t[key]) el.innerText = t[key];
+            });
+            document.getElementById('destination').placeholder = lang === 'it' ? "Dove vuoi andare?" : "Where do you want to go?";
+            document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
+        }
+
+        // --- 6. SALVATAGGIO SMART (INCLUDE ORARI) ---
+        async function saveItineraryCheck() {
+            const schedule = [];
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                const dayItems = [];
+                slot.querySelectorAll('.activity-card').forEach(card => {
+                    const timeInput = card.querySelector('input[type="time"]');
+                    const timeVal = timeInput ? timeInput.value : '';
+                    dayItems.push({ id: card.dataset.id, time: timeVal });
+                });
+                schedule.push(dayItems);
+            });
+
+            const tripTitle = document.getElementById('tripTitle').value.trim() || document.getElementById('destination').value;
+            let overwrite = false;
+
+            if (currentTripId) {
+                if (confirm(`Vuoi sovrascrivere "${tripTitle}"?\nOK = Sì (Sovrascrivi)\nAnnulla = No (Salva Copia)`)) overwrite = true;
+            }
+
+            const itineraryData = {
+                id: currentTripId,
+                title: tripTitle,
+                destination: document.getElementById('destination').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                mood: document.getElementById('searchMood').value,
+                places: allLoadedPlaces, 
+                schedule: schedule 
+            };
+
+            try {
+                const res = await fetch('/api/save-trip', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ itineraryData, overwrite })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    currentTripId = data.tripId; 
+                    alert("Viaggio salvato con successo!");
+                } else alert("Errore nel salvataggio.");
+            } catch(e) { alert("Errore di connessione."); }
+        }
+
+        // --- 7. PDF GENERATOR ---
+        function downloadPDF() {
+            const title = document.getElementById('tripTitle').value || "Mio Viaggio";
+            const dest = document.getElementById('destination').value;
+            const container = document.getElementById('pdf-template');
+            
+            let html = `
+                <div style="padding: 40px; font-family: sans-serif;">
+                    <h1 style="color: #6366f1; font-size: 28px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">${title}</h1>
+                    <h2 style="color: #666; font-size: 16px; margin-top: 5px;">Destinazione: ${dest}</h2>
+                    <div style="margin-top: 30px;">
+            `;
+            
+            document.querySelectorAll('.day-slot').forEach((slot, index) => {
+                const dateHeader = document.querySelectorAll('.bg-white.px-4 h3')[index]?.innerText || `Giorno ${index+1}`;
+                const cards = slot.querySelectorAll('.activity-card');
+                
+                if(cards.length > 0 && !cards[0].classList.contains('empty-placeholder')) {
+                    html += `<h3 style="margin-top: 25px; color: #333; font-size: 18px; background: #f3f4f6; padding: 5px 10px; border-radius: 5px;">${dateHeader}</h3>
+                             <ul style="list-style: none; padding: 0;">`;
+                    
+                    cards.forEach(card => {
+                        const title = card.querySelector('h4').innerText.replace('🔥','');
+                        const timeVal = card.querySelector('input[type="time"]')?.value;
+                        const timeDisplay = timeVal ? `<span style="font-weight:bold; color: #6366f1; margin-right: 10px;">${timeVal}</span>` : '';
+                        const cat = card.querySelector('span.uppercase').innerText;
+                        const color = card.style.borderLeftColor;
+
+                        html += `
+                            <li style="border-left: 5px solid ${color}; padding: 10px; margin-bottom: 8px; background: #fff; border: 1px solid #eee; border-left-color: ${color};">
+                                ${timeDisplay} <strong style="font-size: 14px;">${title}</strong> 
+                                <span style="font-size: 10px; color: #999; margin-left: 5px;">(${cat})</span>
+                            </li>
+                        `;
+                    });
+                    html += `</ul>`;
+                }
+            });
+            html += `</div><div style="margin-top:50px; text-align:center; color:#ccc; font-size:10px;">Generato con WayFinder Ultimate</div></div>`;
+            
+            container.innerHTML = html;
+            container.style.display = 'block'; 
+            
+            html2pdf().set({
+                margin: 10, filename: `${title.replace(/\s+/g, '_')}.pdf`,
+                image: {type:'jpeg', quality:0.98}, html2canvas: {scale: 2}, jsPDF: {unit:'mm', format:'a4'}
+            }).from(container).save().then(() => { container.style.display = 'none'; });
+        }
+
+        // --- 8. FUNZIONI CORE STANDARD ---
+        
+        window.setMood = function(mood, cardElement) {
+            document.getElementById('searchMood').value = mood;
+            if(cardElement) {
+                document.querySelectorAll('.mood-card').forEach(c => c.classList.remove('selected'));
+                cardElement.classList.add('selected');
+            }
+        };
+
+        const destInput = document.getElementById('destination');
+        const suggestionsList = document.getElementById('autocomplete-list');
+        let typingTimer;
+        
+        destInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            const query = this.value;
+            if (query.length < 3) { suggestionsList.style.display = 'none'; return; }
+            typingTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`);
+                    const data = await res.json();
+                    suggestionsList.innerHTML = '';
+                    if (data.length > 0) {
+                        suggestionsList.style.display = 'block';
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            const parts = item.display_name.split(',');
+                            div.innerHTML = `<div class="flex items-center gap-2"><i class="fas fa-map-marker-alt text-slate-300"></i> <b class="truncate">${parts[0]}</b> <span class="text-[10px] text-gray-400 ml-auto whitespace-nowrap">${parts[parts.length - 1]}</span></div>`;
+                            div.onclick = () => { destInput.value = parts[0]; suggestionsList.style.display = 'none'; };
+                            suggestionsList.appendChild(div);
+                        });
+                    }
+                } catch(e){}
+            }, 300);
+        });
+        document.addEventListener('click', (e) => { if(e.target !== destInput) suggestionsList.style.display = 'none'; });
+
+        function markAsAdded(id) {
+            id = String(id);
+            addedPlaces.add(id);
+            const suggestionCard = document.querySelector(`.suggestion-card[data-id="${id}"]`);
+            if (suggestionCard) suggestionCard.style.display = 'none';
+            const marker = markersMap[id];
+            if (marker) marker.setStyle({ color: '#047857', weight: 3, fillColor: '#10b981', fillOpacity: 1, radius: 8 });
+        }
+
+        function markAsRemoved(id) {
+            id = String(id);
+            addedPlaces.delete(id);
+            const suggestionCard = document.querySelector(`.suggestion-card[data-id="${id}"]`);
+            if (suggestionCard) {
+                suggestionCard.style.display = 'block';
+                suggestionCard.classList.remove('fade-in');
+                void suggestionCard.offsetWidth; 
+                suggestionCard.classList.add('fade-in');
+            }
+            const place = allLoadedPlaces.find(p => String(p.id) === id);
+            const marker = markersMap[id];
+            if (marker && place) {
+                const style = CAT_DATA[place.category] || CAT_DATA.altro;
+                marker.setStyle({ color: '#fff', weight: 2, fillColor: style.color, fillOpacity: 0.9, radius: 6 });
+                marker.closePopup();
+            }
+        }
+
+        function highlightMarker(id) {
+            if (addedPlaces.has(String(id))) return; 
+            const marker = markersMap[id];
+            if (marker) {
+                marker.setRadius(10);
+                marker.setStyle({ color: '#fbbf24', weight: 4, fillOpacity: 1 });
+                marker.openPopup();
+                marker.bringToFront();
+            }
+        }
+
+        function resetMarker(id) {
+            if (addedPlaces.has(String(id))) return;
+            const marker = markersMap[id];
+            const place = allLoadedPlaces.find(p => String(p.id) === String(id));
+            if (marker && place) {
+                const style = CAT_DATA[place.category] || CAT_DATA.altro;
+                marker.setRadius(6);
+                marker.setStyle({ color: '#fff', weight: 2, fillColor: style.color, fillOpacity: 0.9 });
+                marker.closePopup();
+            }
+        }
+
+        function normalizeCategory(rawCategory) {
+            if(!rawCategory) return 'altro';
+            const lower = rawCategory.toLowerCase().trim();
+            if (lower.includes('cibo') || lower.includes('gastronomico')) return 'gastronomico';
+            if (lower.includes('party') || lower.includes('divertimento')) return 'divertimento';
+            if (lower.includes('relax') || lower.includes('natura')) return 'relax';
+            if (lower.includes('cultura') || lower.includes('arte')) return 'culturale';
+            return 'attrazione';
+        }
+
+        async function startPlanning() {
+            const dest = document.getElementById('destination').value;
+            const mood = document.getElementById('searchMood').value;
+            if(!dest) return alert("Inserisci una città!");
+            document.getElementById('loading').classList.remove('hidden');
+            
+            tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
+            addedPlaces.clear(); 
+            configureFiltersByMood(mood);
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ destination: dest, mood: mood })
+                });
+                const data = await response.json();
+                
+                if (!data || !data.success) throw new Error(data.message || "Errore del server");
+                // SALVIAMO LE COORDINATE GLOBALI PER LA RICERCA SUCCESSIVA
+                if (!data.destinationCoords) throw new Error("Dati geografici non ricevuti.");
+                currentCityCoords = data.destinationCoords;
+
+                const { lat, lon } = data.destinationCoords;
+                map.setView([lat, lon], 13);
+                
+                allLoadedPlaces = data.places.map(p => ({ ...p, category: normalizeCategory(p.category) }));
+                allLoadedPlaces.sort((a, b) => b.score - a.score);
+                
+                renderApp();
+
+            } catch (err) { alert("Errore: " + err.message); } 
+            finally { document.getElementById('loading').classList.add('hidden'); }
+        }
+
+        function filterBySearchTerm() { renderApp(); }
+        function toggleFilter(key) { filters[key] = !filters[key]; updateFilterUI(key); renderApp(); }
+        function updateFilterUI(key) {
+            const btn = document.getElementById(`chip-${key}`);
+            if(btn) btn.className = filters[key] ? `filter-chip active-${key}` : `filter-chip`;
+        }
+        function configureFiltersByMood(mood) {
+            Object.keys(filters).forEach(k => { filters[k] = true; updateFilterUI(k); });
+        }
+
+        function renderApp() {
+            const pool = document.getElementById('suggestions-pool');
+            const searchTerm = document.getElementById('localSearch').value.toLowerCase();
+            pool.innerHTML = '';
+            markersGroup.clearLayers();
+            markersMap = {};
+
+            let visibleCount = 0;
+
+            allLoadedPlaces.forEach((place, index) => {
+                const cat = place.category;
+                if (!filters[cat]) return; 
+                // Filtro locale solo se non sto premendo invio
+                if (searchTerm && !place.name.toLowerCase().includes(searchTerm)) return;
+
+                visibleCount++;
+                drawMarker(place);
+                
+                // Crea card, nascondi se già aggiunta
+                const card = createCard(place, false);
+                if(card.style.display !== 'none') {
+                    card.style.animationDelay = `${Math.min(index * 0.05, 1)}s`;
+                    card.classList.add('fade-in');
+                }
+                pool.appendChild(card);
+            });
+
+            if(visibleCount === 0) pool.innerHTML = `<div class="text-center mt-10 p-4 text-xs text-gray-400">Nessun risultato locale.<br>Premi <b>Invio</b> per cercare online.</div>`;
+            initDragAndDrop();
+        }
+
+        function drawMarker(place) {
+            const style = CAT_DATA[place.category] || CAT_DATA.altro;
+            const circle = L.circleMarker([place.lat, place.lng], {
+                radius: 6, fillColor: style.color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
+            });
+            let optionsHtml = tripDays.map((day, i) => `<option value="${i}">Giorno ${i+1}</option>`).join('');
+            const popupContent = `
+                <div class="text-center p-2 min-w-[180px]">
+                    <b class="text-slate-800 text-sm block mb-1 truncate font-sans">${place.name}</b>
+                    <span class="text-[9px] text-white px-2 py-0.5 rounded-full font-bold uppercase" style="background:${style.color}">${place.category}</span>
+                    <p class="text-[10px] text-gray-500 mt-2 mb-2 line-clamp-2">${place.description}</p>
+                    <div class="flex gap-1 justify-center mt-2 border-t pt-2">
+                        <select id="sel-${place.id}" class="text-xs border rounded w-full bg-gray-50 p-1 outline-none text-slate-600">${optionsHtml}</select>
+                        <button onclick="addToDay('${place.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 rounded font-bold transition-colors">+</button>
+                    </div>
+                </div>`;
+            circle.bindPopup(popupContent);
+            markersMap[place.id] = circle;
+            markersGroup.addLayer(circle);
+        }
+
+        function createCard(place, isTimeline = false, savedTime = '') {
+            const style = CAT_DATA[place.category] || CAT_DATA.altro;
+            const extraClass = isTimeline ? 'in-timeline' : 'suggestion-card';
+            const initialDisplay = (!isTimeline && addedPlaces.has(String(place.id))) ? 'none' : 'block';
+            
+            const card = document.createElement('div');
+            card.className = `activity-card ${extraClass}`;
+            card.style.display = initialDisplay;
+            card.style.borderLeftColor = style.color;
+            card.dataset.id = place.id;
+
+            if (!isTimeline) {
+                card.onmouseenter = () => highlightMarker(place.id);
+                card.onmouseleave = () => resetMarker(place.id);
+            }
+
+            const fire = place.score > 800 ? '<span class="text-orange-500 ml-1" title="Top">🔥</span>' : '';
+            const hideTime = isTimeline ? '' : 'hidden';
+
+            card.innerHTML = `
+                <div class="card-header pr-6">
+                    <h4 class="font-semibold text-xs text-slate-800 leading-tight mb-1">${place.name} ${fire}</h4>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] uppercase font-bold tracking-wider" style="color:${style.color}">${style.icon} ${place.category}</span>
+                    </div>
+                </div>
+                <div class="time-selector ${hideTime} mt-2 pt-2 border-t border-dashed border-slate-200 flex items-center gap-2">
+                    <i class="far fa-clock text-slate-400 text-[10px]"></i>
+                    <input type="time" value="${savedTime}" class="text-[10px] p-1 border border-slate-200 rounded bg-white text-slate-600 outline-none w-20 focus:border-indigo-400">
+                </div>
+            `;
+
+            if (isTimeline) {
+                const btn = document.createElement('div');
+                btn.className = 'delete-btn';
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.onclick = function() { removeFromTimeline(this, place.id); };
+                card.appendChild(btn);
+            }
+
+            return card;
+        }
+
+        window.addToDay = function(id) {
+            const dayIdx = document.getElementById(`sel-${id}`).value;
+            const place = allLoadedPlaces.find(p => String(p.id) === String(id));
+            const dayContent = document.getElementById(`day-content-${dayIdx}`);
+            if (dayContent && dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(dayIdx);
+
+            if(dayContent && place) {
+                const card = createCard(place, true);
+                card.style.opacity = '0'; card.style.transform = 'translateY(10px)';
+                dayContent.prepend(card);
+                requestAnimationFrame(() => { card.style.transition = 'all 0.3s ease'; card.style.opacity = '1'; card.style.transform = 'translateY(0)'; });
+                markAsAdded(id);
+                updateCount();
+                map.closePopup();
+            }
+        };
+
+        window.removeFromTimeline = function(btnElement, id) {
+            const card = btnElement.closest('.activity-card');
+            card.style.transform = 'scale(0.9) translateX(10px)'; card.style.opacity = '0';
+            setTimeout(() => { card.remove(); markAsRemoved(id); updateCount(); }, 200);
+        };
+
+        window.updateCount = function() {
+            document.querySelectorAll('.day-slot').forEach((slot, index) => {
+                const badge = document.getElementById(`count-${index}`);
+                if(badge) {
+                    const count = slot.querySelectorAll('.activity-card').length;
+                    badge.innerText = `${count} stop`;
+                    badge.className = count > 0 ? 'text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wide' : 'text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wide';
+                    const placeholder = slot.querySelector('.empty-placeholder');
+                    if(placeholder) placeholder.style.display = count > 0 ? 'none' : 'block';
+                }
+            });
+        };
+
+        window.toggleDay = function(index) {
+            const content = document.getElementById(`day-content-${index}`);
+            const icon = document.getElementById(`day-icon-${index}`);
+            const container = content.parentElement;
+            if(content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.style.transform = 'rotate(0deg)';
+                container.classList.add('ring-2', 'ring-indigo-100');
+            } else {
+                content.classList.add('hidden');
+                icon.style.transform = 'rotate(-90deg)';
+                container.classList.remove('ring-2', 'ring-indigo-100');
+            }
+        };
+
+        function generateDateSlots(start, end) {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            let curr = new Date(start);
+            const fin = new Date(end);
+            let i = 0;
+            tripDays = [];
+
+            while(curr <= fin) {
+                const dateStr = curr.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+                tripDays.push(dateStr);
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md mb-3">
+                        <div onclick="toggleDay(${i})" class="bg-white px-4 py-3 border-b border-gray-100 flex justify-between items-center cursor-pointer select-none">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center"><i id="day-icon-${i}" class="fas fa-chevron-down text-indigo-500 text-xs chevron-icon"></i></div>
+                                <h3 class="font-bold text-sm text-slate-700 capitalize">${dateStr}</h3>
+                            </div>
+                            <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase">0 stop</span>
+                        </div>
+                        <div id="day-content-${i}" class="day-slot min-h-[80px] p-3 space-y-2 bg-slate-50/50">
+                            <div class="empty-placeholder text-center py-4 opacity-40 pointer-events-none">
+                                <i class="far fa-map text-slate-300 mb-1"></i>
+                                <p class="text-[10px] text-slate-400">Trascina qui i luoghi</p>
+                            </div>
+                        </div>
+                    </div>`;
+                curr.setDate(curr.getDate() + 1);
+                i++;
+            }
+            return tripDays;
+        }
+
+        function initDragAndDrop() {
+            const pool = document.getElementById('suggestions-pool');
+            new Sortable(pool, { group: { name: 'p', pull: 'clone', put: false }, sort: false, animation: 150, ghostClass: 'bg-indigo-50', chosenClass: 'scale-95' });
+            
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                new Sortable(slot, {
+                    group: 'p', animation: 150,
+                    onAdd: (evt) => {
+                        const item = evt.item;
+                        const id = item.dataset.id;
+
+                        // Se spostamento interno, non fare nulla di distruttivo
+                        if (item.classList.contains('in-timeline')) {
+                            updateCount();
+                            return; 
+                        }
+
+                        // Se già aggiunto, evita duplicati
+                        if (addedPlaces.has(String(id))) { item.remove(); return; }
+
+                        // Rimuovi card grezza, crea quella bella
+                        item.remove();
+                        const place = allLoadedPlaces.find(p => String(p.id) === String(id));
+                        
+                        if(place) {
+                            const newCard = createCard(place, true);
+                            if (evt.newIndex >= slot.children.length) slot.appendChild(newCard); else slot.insertBefore(newCard, slot.children[evt.newIndex]);
+                            markAsAdded(id); updateCount();
+                        }
+                    },
+                    onRemove: updateCount, onEnd: updateCount
+                });
+            });
+        }
+    </script>
+</body>
+</html>
