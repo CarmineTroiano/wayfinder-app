@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>WayFinder Ultimate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WayFinder Ultimate Planner</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -30,19 +31,39 @@
     </script>
 
     <style>
-        body { background-color: #f3f4f6; }
-        
-        /* Mappa */
-        .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
-        #map { height: 100%; width: 100%; border-radius: 1rem; z-index: 1; }
+        /* Base */
+        body { 
+            background-color: #f3f4f6; 
+        }
+
+        /* Mappa Leaflet */
+        #map { 
+            height: 100%; 
+            width: 100%; 
+            border-radius: 1rem; 
+            z-index: 1; 
+        }
+        .leaflet-marker-icon, .leaflet-marker-shadow { 
+            animation: none !important; 
+            transition: none !important; 
+        }
         
         /* Scrollbar personalizzata */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar { 
+            width: 6px; 
+        }
+        ::-webkit-scrollbar-track { 
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb { 
+            background: #cbd5e1; 
+            border-radius: 10px; 
+        }
+        ::-webkit-scrollbar-thumb:hover { 
+            background: #94a3b8; 
+        }
 
-        /* Card Attività */
+        /* --- CARD ATTIVITÀ (I LUOGHI) --- */
         .activity-card {
             background: white;
             border-radius: 12px;
@@ -50,7 +71,7 @@
             margin-bottom: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border: 1px solid #f1f5f9;
-            border-left-width: 5px; 
+            border-left-width: 5px; /* Barra colorata a sinistra */
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
             position: relative;
             cursor: grab;
@@ -59,16 +80,35 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 15px rgba(0,0,0,0.1);
         }
-        .activity-card:active { cursor: grabbing; }
+        .activity-card:active { 
+            cursor: grabbing; 
+        }
 
-        /* Stile Card quando è nella Timeline */
+        /* Stile quando la card è trascinata nella Timeline */
         .in-timeline {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-left-width: 5px; 
         }
 
-        /* Menu Utente Dropdown */
+        /* --- CARD NOTE (LE NOTE GIALLINE) --- */
+        .note-card {
+            background-color: #fef9c3 !important; /* Giallo chiaro */
+            border-left-color: #eab308 !important; /* Giallo scuro */
+            border: 1px solid #fef08a;
+        }
+        .note-input {
+            background: transparent; 
+            border: none; 
+            outline: none; 
+            width: 100%;
+            font-size: 0.85rem; 
+            color: #4b5563; 
+            font-style: italic; 
+            resize: none;
+        }
+
+        /* --- MENU UTENTE DROPDOWN --- */
         #user-dropdown {
             transform-origin: top right; 
             transition: all 0.2s ease-out;
@@ -77,7 +117,11 @@
             pointer-events: none;
             border: 1px solid #e2e8f0;
         }
-        #user-dropdown.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+        #user-dropdown.open { 
+            opacity: 1; 
+            transform: scale(1); 
+            pointer-events: auto; 
+        }
         
         .menu-item { 
             display: flex; 
@@ -89,11 +133,22 @@
             transition: all 0.15s; 
             cursor: pointer !important; 
         }
-        .menu-item:hover { background-color: #f8fafc; color: #6366f1; }
-        .menu-item i { width: 20px; text-align: center; }
+        .menu-item:hover { 
+            background-color: #f8fafc; 
+            color: #6366f1; 
+        }
+        .menu-item i { 
+            width: 20px; 
+            text-align: center; 
+        }
 
-        /* Mood Cards */
-        .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        /* --- MOOD CARDS (SELETTORI STILE) --- */
+        .mood-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 8px; 
+            margin-bottom: 10px; 
+        }
         .mood-card {
             border: 1px solid #e5e7eb;
             border-radius: 10px;
@@ -103,64 +158,134 @@
             transition: all 0.2s;
             background: white;
         }
-        .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
+        .mood-card:hover { 
+            border-color: #a5b4fc; 
+            background: #eef2ff; 
+        }
         .mood-card.selected {
             border-color: #6366f1;
             background: #e0e7ff;
             color: #4338ca;
             box-shadow: 0 0 0 2px #c7d2fe;
         }
-        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
-        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+        .mood-icon { 
+            font-size: 1.1rem; 
+            display: block; 
+            margin-bottom: 2px; 
+        }
+        .mood-label { 
+            font-size: 0.7rem; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+        }
 
-        /* Filtri Chips */
+        /* --- FILTRI CHIPS --- */
         .filter-chip {
-            font-size: 0.7rem; padding: 5px 10px; border-radius: 20px;
-            background: white; border: 1px solid #e5e7eb;
-            color: #64748b; font-weight: 600; cursor: pointer;
-            transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+            font-size: 0.7rem; 
+            padding: 5px 10px; 
+            border-radius: 20px; 
+            background: white; 
+            border: 1px solid #e5e7eb;
+            color: #64748b; 
+            font-weight: 600; 
+            cursor: pointer;
+            transition: all 0.2s; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+        .filter-chip:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1); 
+        }
         .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
         .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
         .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
         .filter-chip.active-relax { background: #dcfce7; border-color: #86efac; color: #15803d; }
         .filter-chip.active-attrazione { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
-        /* Autocomplete Lista */
+        /* --- AUTOCOMPLETE DROPDOWN --- */
         #autocomplete-list {
-            position: absolute; top: 110%; left: 0; right: 0;
-            background: white; border-radius: 12px; z-index: 50;
-            max-height: 220px; overflow-y: auto;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            display: none; border: 1px solid #f3f4f6;
+            position: absolute; 
+            top: 110%; 
+            left: 0; 
+            right: 0; 
+            background: white; 
+            border-radius: 12px; 
+            z-index: 50;
+            max-height: 220px; 
+            overflow-y: auto; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
+            display: none; 
+            border: 1px solid #f3f4f6;
         }
-        .suggestion-item { padding: 10px 15px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: #334155; }
-        .suggestion-item:hover { background-color: #f8fafc; color: #6366f1; }
+        .suggestion-item { 
+            padding: 10px 15px; 
+            font-size: 13px; 
+            cursor: pointer; 
+            border-bottom: 1px solid #f1f5f9; 
+            color: #334155; 
+        }
+        .suggestion-item:hover { 
+            background-color: #f8fafc; 
+            color: #6366f1; 
+        }
 
-        /* Bottone Elimina */
+        /* --- BOTTONE ELIMINA (X) --- */
         .delete-btn {
-            position: absolute; top: -6px; right: -6px;
-            background: #ef4444; color: white;
-            width: 20px; height: 20px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px; cursor: pointer; opacity: 0; 
-            transition: all 0.2s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
-            z-index: 20; transform: scale(0.8);
+            position: absolute; 
+            top: -6px; 
+            right: -6px; 
+            background: #ef4444; 
+            color: white;
+            width: 20px; 
+            height: 20px; 
+            border-radius: 50%;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 10px; 
+            cursor: pointer; 
+            opacity: 0; 
+            transition: all 0.2s; 
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+            z-index: 20; 
+            transform: scale(0.8);
         }
-        .activity-card:hover .delete-btn { opacity: 1; top: 5px; right: 5px; transform: scale(1); }
+        .activity-card:hover .delete-btn { 
+            opacity: 1; 
+            top: 5px; 
+            right: 5px; 
+            transform: scale(1); 
+        }
 
-        /* Animazioni */
+        /* --- ANIMAZIONI --- */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
         
         .chevron-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         
-        .map-legend { font-family: 'Poppins', sans-serif; font-size: 10px; line-height: 1.5; color: #334155; }
-        .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        /* --- LEGENDA MAPPA --- */
+        .map-legend { 
+            font-family: 'Poppins', sans-serif; 
+            font-size: 10px; 
+            line-height: 1.5; 
+            color: #334155; 
+        }
+        .legend-dot { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 5px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2); 
+        }
         
-        /* Template PDF Nascosto */
+        /* --- TEMPLATE PDF NASCOSTO --- */
         #pdf-template { display: none; }
     </style>
 </head>
@@ -220,6 +345,10 @@
                         
                         <div class="menu-item" onclick="downloadPDF()">
                             <i class="fas fa-file-pdf text-red-500"></i> <span>Scarica PDF</span>
+                        </div>
+
+                        <div class="menu-item" onclick="saveItineraryCheck()">
+                            <i class="fas fa-save text-orange-500"></i> <span>Salva Modifiche</span>
                         </div>
 
                         <div class="my-1 border-t border-gray-100"></div>
@@ -312,7 +441,7 @@
 
         <main class="flex-1 bg-slate-100 flex flex-col min-w-[380px] border-r border-gray-200 relative">
             <div class="p-3 bg-white border-b flex justify-between items-center z-10">
-                <span class="text-xs font-bold text-slate-700 uppercase">ITINERARIO</span>
+                <span class="text-xs font-bold text-slate-700 uppercase" data-lang="itinerary">ITINERARIO</span>
             </div>
             <div id="timeline-container" class="flex-1 overflow-y-auto p-4 space-y-3 relative z-0"></div>
         </main>
@@ -371,8 +500,28 @@
             altro: { icon: '🔹', color: '#64748b' }
         };
 
-        // --- 2. RICERCA ONLINE SPECIFICA ---
-        // Se non trovi il Colosseo, scrivilo e premi invio.
+        // --- 2. GESTIONE NOTE (NUOVA FUNZIONE) ---
+        function addNoteToDay(dayIndex) {
+            const dayContent = document.getElementById(`day-content-${dayIndex}`);
+            if(dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(dayIndex);
+            
+            const card = document.createElement('div');
+            card.className = `activity-card note-card in-timeline`;
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <textarea class="note-input" placeholder="Scrivi una nota... (es. Prenotazione h 20:00)" rows="2"></textarea>
+                    <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
+                </div>
+                <div class="mt-2 border-t border-yellow-200 pt-2 flex items-center gap-2">
+                    <i class="far fa-clock text-yellow-600 text-[10px]"></i>
+                    <input type="time" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
+                </div>
+            `;
+            dayContent.appendChild(card);
+            updateCount();
+        }
+
+        // --- 3. RICERCA ONLINE SPECIFICA ---
         async function searchOnline() {
             const query = document.getElementById('localSearch').value;
             if(!query) return;
@@ -405,7 +554,7 @@
             document.getElementById('loading').classList.add('hidden');
         }
 
-        // --- 3. MENU E UTENTE ---
+        // --- 4. MENU E UTENTE ---
         function toggleUserMenu() {
             document.getElementById('user-dropdown').classList.toggle('open');
         }
@@ -415,7 +564,7 @@
             if (!btn && !e.target.closest('#user-dropdown')) dropdown.classList.remove('open');
         });
 
-        // --- 4. AUTO-LOAD DEL VIAGGIO (CON ORARI) ---
+        // --- 5. AUTO-LOAD DEL VIAGGIO (CON ORARI E NOTE) ---
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tripId = urlParams.get('tripId');
@@ -438,21 +587,38 @@
                         allLoadedPlaces = saved.places;
                         tripDays = generateDateSlots(saved.startDate, saved.endDate);
                         
-                        // Ripristino Schedule con Orari
+                        // Ripristino Schedule (Luoghi + Note)
                         if (saved.schedule) {
                             saved.schedule.forEach((dayItems, index) => {
                                 const dayContent = document.getElementById(`day-content-${index}`);
                                 if(dayContent) {
                                     dayItems.forEach(item => {
-                                        // Supporto sia per vecchio formato (ID stringa) sia nuovo (Oggetto {id, time})
-                                        const placeId = typeof item === 'object' ? item.id : item;
-                                        const placeTime = typeof item === 'object' ? item.time : '';
-                                        
-                                        const place = allLoadedPlaces.find(p => String(p.id) === String(placeId));
-                                        if (place) {
-                                            const card = createCard(place, true, placeTime);
+                                        // Gestione Note
+                                        if (item.type === 'note') {
+                                            const card = document.createElement('div');
+                                            card.className = `activity-card note-card in-timeline`;
+                                            card.innerHTML = `
+                                                <div class="flex justify-between items-start">
+                                                    <textarea class="note-input" rows="2">${item.text}</textarea>
+                                                    <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
+                                                </div>
+                                                <div class="mt-2 border-t border-yellow-200 pt-2 flex items-center gap-2">
+                                                    <i class="far fa-clock text-yellow-600 text-[10px]"></i>
+                                                    <input type="time" value="${item.time || ''}" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
+                                                </div>`;
                                             dayContent.appendChild(card);
-                                            markAsAdded(placeId);
+                                        } 
+                                        // Gestione Luoghi
+                                        else {
+                                            const placeId = item.id || item;
+                                            const placeTime = item.time || '';
+                                            
+                                            const place = allLoadedPlaces.find(p => String(p.id) === String(placeId));
+                                            if (place) {
+                                                const card = createCard(place, true, placeTime);
+                                                dayContent.appendChild(card);
+                                                markAsAdded(placeId);
+                                            }
                                         }
                                     });
                                     if(dayItems.length > 0) toggleDay(index);
@@ -470,15 +636,15 @@
             }
         };
 
-        // --- 5. MULTILINGUA ---
+        // --- 6. MULTILINGUA ---
         const translations = {
             it: {
                 save: "Salva", mood: "Scegli il tuo stile", culture: "Cultura", food: "Gourmet", party: "Party", relax: "Relax",
-                find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "Il tuo Itinerario"
+                find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "ITINERARIO"
             },
             en: {
                 save: "Save", mood: "Choose your mood", culture: "Culture", food: "Gourmet", party: "Party", relax: "Relax",
-                find: "FIND PLACES", start: "Start Searching", itinerary: "Your Itinerary"
+                find: "FIND PLACES", start: "Start Searching", itinerary: "ITINERARY"
             }
         };
 
@@ -501,7 +667,7 @@
             document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
         }
 
-        // --- 6. SALVATAGGIO SMART (INCLUDE ORARI) ---
+        // --- 7. SALVATAGGIO SMART (INCLUDE NOTE E ORARI) ---
         async function saveItineraryCheck() {
             const schedule = [];
             document.querySelectorAll('.day-slot').forEach(slot => {
@@ -509,7 +675,13 @@
                 slot.querySelectorAll('.activity-card').forEach(card => {
                     const timeInput = card.querySelector('input[type="time"]');
                     const timeVal = timeInput ? timeInput.value : '';
-                    dayItems.push({ id: card.dataset.id, time: timeVal });
+
+                    if (card.classList.contains('note-card')) {
+                        const text = card.querySelector('textarea').value;
+                        dayItems.push({ type: 'note', text: text, time: timeVal });
+                    } else {
+                        dayItems.push({ type: 'place', id: card.dataset.id, time: timeVal });
+                    }
                 });
                 schedule.push(dayItems);
             });
@@ -545,7 +717,7 @@
             } catch(e) { alert("Errore di connessione."); }
         }
 
-        // --- 7. PDF GENERATOR ---
+        // --- 8. PDF GENERATOR ---
         function downloadPDF() {
             const title = document.getElementById('tripTitle').value || "Mio Viaggio";
             const dest = document.getElementById('destination').value;
@@ -560,25 +732,30 @@
             
             document.querySelectorAll('.day-slot').forEach((slot, index) => {
                 const dateHeader = document.querySelectorAll('.bg-white.px-4 h3')[index]?.innerText || `Giorno ${index+1}`;
-                const cards = slot.querySelectorAll('.activity-card');
                 
-                if(cards.length > 0 && !cards[0].classList.contains('empty-placeholder')) {
+                // Controlla se ci sono card vere (escluso placeholder)
+                const hasCards = Array.from(slot.children).some(c => c.classList.contains('activity-card'));
+
+                if(hasCards) {
                     html += `<h3 style="margin-top: 25px; color: #333; font-size: 18px; background: #f3f4f6; padding: 5px 10px; border-radius: 5px;">${dateHeader}</h3>
                              <ul style="list-style: none; padding: 0;">`;
                     
-                    cards.forEach(card => {
-                        const title = card.querySelector('h4').innerText.replace('🔥','');
-                        const timeVal = card.querySelector('input[type="time"]')?.value;
-                        const timeDisplay = timeVal ? `<span style="font-weight:bold; color: #6366f1; margin-right: 10px;">${timeVal}</span>` : '';
-                        const cat = card.querySelector('span.uppercase').innerText;
-                        const color = card.style.borderLeftColor;
+                    slot.querySelectorAll('.activity-card').forEach(card => {
+                        const time = card.querySelector('input[type="time"]')?.value;
+                        const timeStr = time ? `<b>${time}</b> ` : '';
 
-                        html += `
-                            <li style="border-left: 5px solid ${color}; padding: 10px; margin-bottom: 8px; background: #fff; border: 1px solid #eee; border-left-color: ${color};">
-                                ${timeDisplay} <strong style="font-size: 14px;">${title}</strong> 
+                        if (card.classList.contains('note-card')) {
+                            const text = card.querySelector('textarea').value;
+                            html += `<li style="background:#fef9c3; padding:10px; margin-bottom:5px; border-left:4px solid #eab308; font-style:italic;">${timeStr} ${text}</li>`;
+                        } else {
+                            const name = card.querySelector('h4').innerText.replace('🔥','');
+                            const cat = card.querySelector('span.uppercase').innerText;
+                            const color = card.style.borderLeftColor;
+                            html += `<li style="border-left: 5px solid ${color}; padding: 10px; margin-bottom: 8px; background: #fff; border: 1px solid #eee; border-left-color: ${color};">
+                                ${timeStr} <strong style="font-size: 14px;">${name}</strong> 
                                 <span style="font-size: 10px; color: #999; margin-left: 5px;">(${cat})</span>
-                            </li>
-                        `;
+                            </li>`;
+                        }
                     });
                     html += `</ul>`;
                 }
@@ -594,7 +771,7 @@
             }).from(container).save().then(() => { container.style.display = 'none'; });
         }
 
-        // --- 8. FUNZIONI CORE STANDARD ---
+        // --- 9. FUNZIONI CORE STANDARD ---
         
         window.setMood = function(mood, cardElement) {
             document.getElementById('searchMood').value = mood;
@@ -712,7 +889,6 @@
                 const data = await response.json();
                 
                 if (!data || !data.success) throw new Error(data.message || "Errore del server");
-                // SALVIAMO LE COORDINATE GLOBALI PER LA RICERCA SUCCESSIVA
                 if (!data.destinationCoords) throw new Error("Dati geografici non ricevuti.");
                 currentCityCoords = data.destinationCoords;
 
@@ -861,8 +1037,8 @@
                 const badge = document.getElementById(`count-${index}`);
                 if(badge) {
                     const count = slot.querySelectorAll('.activity-card').length;
-                    badge.innerText = `${count} stop`;
-                    badge.className = count > 0 ? 'text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wide' : 'text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wide';
+                    const notes = slot.querySelectorAll('.note-card').length;
+                    badge.innerText = `${count - notes} luoghi, ${notes} note`;
                     const placeholder = slot.querySelector('.empty-placeholder');
                     if(placeholder) placeholder.style.display = count > 0 ? 'none' : 'block';
                 }
@@ -902,7 +1078,10 @@
                                 <div class="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center"><i id="day-icon-${i}" class="fas fa-chevron-down text-indigo-500 text-xs chevron-icon"></i></div>
                                 <h3 class="font-bold text-sm text-slate-700 capitalize">${dateStr}</h3>
                             </div>
-                            <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase">0 stop</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="event.stopPropagation(); addNoteToDay(${i})" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs transition" title="Aggiungi Nota"><i class="fas fa-sticky-note"></i> +</button>
+                                <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wide">0 stop</span>
+                            </div>
                         </div>
                         <div id="day-content-${i}" class="day-slot min-h-[80px] p-3 space-y-2 bg-slate-50/50">
                             <div class="empty-placeholder text-center py-4 opacity-40 pointer-events-none">
