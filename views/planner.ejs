@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WayFinder Ultimate Planner</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -26,41 +25,32 @@
         body { background-color: #f3f4f6; }
         #map { height: 100%; width: 100%; border-radius: 1rem; z-index: 1; }
         .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* CARD ATTIVITÀ (I LUOGHI) */
-        .activity-card {
-            background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; border-left-width: 5px; 
-            transition: all 0.2s; position: relative; cursor: grab;
-        }
+        .activity-card { background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid #f1f5f9; border-left-width: 5px; transition: all 0.2s; position: relative; cursor: grab; }
         .activity-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .activity-card:active { cursor: grabbing; }
         .in-timeline { background: #f8fafc; border: 1px solid #e2e8f0; border-left-width: 5px; }
 
-        /* CARD NOTE */
         .note-card { transition: background-color 0.3s, border-left-color 0.3s; }
         .note-input { background: transparent; border: none; outline: none; width: 100%; font-size: 0.85rem; color: #4b5563; font-style: italic; resize: none; }
         .color-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); transition: transform 0.2s; }
         .color-dot:hover { transform: scale(1.2); }
 
-        /* MENU UTENTE */
         #user-dropdown { transform-origin: top right; transition: all 0.2s ease-out; opacity: 0; transform: scale(0.95); pointer-events: none; border: 1px solid #e2e8f0; }
         #user-dropdown.open { opacity: 1; transform: scale(1); pointer-events: auto; }
         .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 14px; color: #475569; transition: all 0.15s; cursor: pointer !important; }
         .menu-item:hover { background-color: #f8fafc; color: #6366f1; }
 
-        /* MOOD e FILTRI */
         .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
         .mood-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
         .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
         .mood-card.selected { border-color: #6366f1; background: #e0e7ff; color: #4338ca; box-shadow: 0 0 0 2px #c7d2fe; }
-        
+        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+
         .filter-chip { font-size: 0.7rem; padding: 5px 10px; border-radius: 20px; background: white; border: 1px solid #e5e7eb; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
         .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
         .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
@@ -343,7 +333,7 @@
             } catch(e) { alert("Errore di connessione."); }
         }
 
-        // --- CARICAMENTO ---
+        // --- CARICAMENTO E INIZIALIZZAZIONE (FIX PERSI) ---
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tripId = urlParams.get('tripId');
@@ -438,7 +428,7 @@
             html2pdf().set({ margin: 10, filename: `${title.replace(/\s+/g, '_')}.pdf`, image: {type:'jpeg', quality:0.98}, html2canvas: {scale: 2}, jsPDF: {unit:'mm', format:'a4'} }).from(container).save().then(() => { container.style.display = 'none'; });
         }
 
-        // --- FUNZIONI CORE STANDARD ---
+        // --- FUNZIONI CORE STANDARD (FIX LOGICA E VARIABILI) ---
         function toggleUserMenu() { document.getElementById('user-dropdown').classList.toggle('open'); }
         document.addEventListener('click', (e) => {
             const dropdown = document.getElementById('user-dropdown');
@@ -551,7 +541,6 @@
             document.getElementById('loading').classList.remove('hidden');
             
             tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
-            // Non resettiamo currentTripId/allLoadedPlaces qui per preservare lo stato del carrello
             
             configureFiltersByMood(mood);
 
@@ -567,7 +556,7 @@
                 const { lat, lon } = data.destinationCoords;
                 map.setView([lat, lon], 13);
                 
-                // AGGIUNGIAMO i nuovi luoghi all'array esistente
+                // FIX LOGICA: AGGIUNGERE senza resettare allLoadedPlaces
                 data.places.forEach(p => {
                     p.category = normalizeCategory(p.category);
                     if (!allLoadedPlaces.some(existing => existing.id === p.id)) {
@@ -791,7 +780,7 @@
             document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
         }
 
-        // --- SHARED UTILS ---
+        // --- FUNZIONI CONDIVISIONE SOCIAL ---
         function toggleSocialShare(event) {
             event.stopPropagation();
             document.getElementById('social-share-menu').classList.toggle('hidden');
