@@ -4,15 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WayFinder Ultimate Planner</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script>
@@ -20,288 +15,66 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: {
-                        primary: '#6366f1', // Indigo 500
-                        secondary: '#ec4899', // Pink 500
-                        accent: '#8b5cf6', // Violet 500
-                    }
+                    colors: { primary: '#6366f1', secondary: '#ec4899', accent: '#8b5cf6' }
                 }
             }
         }
     </script>
 
     <style>
-        /* Base */
-        body { 
-            background-color: #f3f4f6; 
-        }
+        body { background-color: #f3f4f6; }
+        #map { height: 100%; width: 100%; border-radius: 1rem; z-index: 1; }
+        .leaflet-marker-icon, .leaflet-marker-shadow { animation: none !important; transition: none !important; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Mappa Leaflet */
-        #map { 
-            height: 100%; 
-            width: 100%; 
-            border-radius: 1rem; 
-            z-index: 1; 
-        }
-        /* Fix animazioni marker */
-        .leaflet-marker-icon, .leaflet-marker-shadow { 
-            animation: none !important; 
-            transition: none !important; 
-        }
-        
-        /* Scrollbar personalizzata */
-        ::-webkit-scrollbar { 
-            width: 6px; 
-        }
-        ::-webkit-scrollbar-track { 
-            background: transparent; 
-        }
-        ::-webkit-scrollbar-thumb { 
-            background: #cbd5e1; 
-            border-radius: 10px; 
-        }
-        ::-webkit-scrollbar-thumb:hover { 
-            background: #94a3b8; 
-        }
-
-        /* --- CARD ATTIVITÀ (I LUOGHI) --- */
         .activity-card {
-            background: white;
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border: 1px solid #f1f5f9;
-            border-left-width: 5px; /* Barra colorata a sinistra */
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            cursor: grab;
+            background: white; border-radius: 12px; padding: 10px; margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; border-left-width: 5px; 
+            transition: all 0.2s; position: relative; cursor: grab;
         }
-        .activity-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
-        .activity-card:active { 
-            cursor: grabbing; 
-        }
+        .activity-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .activity-card:active { cursor: grabbing; }
+        .in-timeline { background: #f8fafc; border: 1px solid #e2e8f0; border-left-width: 5px; }
 
-        /* Stile quando la card è trascinata nella Timeline */
-        .in-timeline {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-left-width: 5px; 
-        }
+        .note-card { background-color: #fef9c3; border-left-color: #eab308; border: 1px solid rgba(0,0,0,0.05); transition: background-color 0.3s, border-left-color 0.3s; }
+        .note-input { background: transparent; border: none; outline: none; width: 100%; font-size: 0.85rem; color: #4b5563; font-style: italic; resize: none; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .color-dot:hover { transform: scale(1.2); }
 
-        /* --- CARD NOTE (LE NOTE GIALLINE) --- */
-        .note-card {
-            /* Default, poi sovrascritto da JS */
-            background-color: #fef9c3; 
-            border-left-color: #eab308;
-            border: 1px solid rgba(0,0,0,0.05);
-            transition: background-color 0.3s, border-left-color 0.3s;
-        }
-        .note-input {
-            background: transparent; 
-            border: none; 
-            outline: none; 
-            width: 100%;
-            font-size: 0.85rem; 
-            color: #4b5563; 
-            font-style: italic; 
-            resize: none;
-        }
-        
-        /* Pallini colori per le note */
-        .color-dot {
-            width: 12px; 
-            height: 12px; 
-            border-radius: 50%; 
-            cursor: pointer;
-            border: 1px solid rgba(0,0,0,0.1); 
-            transition: transform 0.2s;
-        }
-        .color-dot:hover { 
-            transform: scale(1.2); 
-        }
+        #user-dropdown { transform-origin: top right; transition: all 0.2s ease-out; opacity: 0; transform: scale(0.95); pointer-events: none; border: 1px solid #e2e8f0; }
+        #user-dropdown.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 14px; color: #475569; transition: all 0.15s; cursor: pointer !important; }
+        .menu-item:hover { background-color: #f8fafc; color: #6366f1; }
 
-        /* --- MENU UTENTE DROPDOWN --- */
-        #user-dropdown {
-            transform-origin: top right; 
-            transition: all 0.2s ease-out;
-            opacity: 0; 
-            transform: scale(0.95); 
-            pointer-events: none;
-            border: 1px solid #e2e8f0;
-        }
-        #user-dropdown.open { 
-            opacity: 1; 
-            transform: scale(1); 
-            pointer-events: auto; 
-        }
-        
-        .menu-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            padding: 12px 16px; 
-            font-size: 14px; 
-            color: #475569; 
-            transition: all 0.15s; 
-            cursor: pointer !important; 
-        }
-        .menu-item:hover { 
-            background-color: #f8fafc; 
-            color: #6366f1; 
-        }
-        .menu-item i { 
-            width: 20px; 
-            text-align: center; 
-        }
+        .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .mood-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
+        .mood-card:hover { border-color: #a5b4fc; background: #eef2ff; }
+        .mood-card.selected { border-color: #6366f1; background: #e0e7ff; color: #4338ca; box-shadow: 0 0 0 2px #c7d2fe; }
+        .mood-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+        .mood-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
 
-        /* --- MOOD CARDS (SELETTORI STILE) --- */
-        .mood-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 8px; 
-            margin-bottom: 10px; 
-        }
-        .mood-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-        }
-        .mood-card:hover { 
-            border-color: #a5b4fc; 
-            background: #eef2ff; 
-        }
-        .mood-card.selected {
-            border-color: #6366f1;
-            background: #e0e7ff;
-            color: #4338ca;
-            box-shadow: 0 0 0 2px #c7d2fe;
-        }
-        .mood-icon { 
-            font-size: 1.1rem; 
-            display: block; 
-            margin-bottom: 2px; 
-        }
-        .mood-label { 
-            font-size: 0.7rem; 
-            font-weight: 600; 
-            text-transform: uppercase; 
-        }
-
-        /* --- FILTRI CHIPS --- */
-        .filter-chip {
-            font-size: 0.7rem; 
-            padding: 5px 10px; 
-            border-radius: 20px; 
-            background: white; 
-            border: 1px solid #e5e7eb;
-            color: #64748b; 
-            font-weight: 600; 
-            cursor: pointer;
-            transition: all 0.2s; 
-            display: flex; 
-            align-items: center; 
-            gap: 5px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .filter-chip:hover { 
-            transform: translateY(-1px); 
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1); 
-        }
+        .filter-chip { font-size: 0.7rem; padding: 5px 10px; border-radius: 20px; background: white; border: 1px solid #e5e7eb; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .filter-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .filter-chip.active-culturale { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce; }
         .filter-chip.active-gastronomico { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
         .filter-chip.active-divertimento { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
         .filter-chip.active-relax { background: #dcfce7; border-color: #86efac; color: #15803d; }
         .filter-chip.active-attrazione { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
-        /* --- AUTOCOMPLETE DROPDOWN --- */
-        #autocomplete-list {
-            position: absolute; 
-            top: 110%; 
-            left: 0; 
-            right: 0; 
-            background: white; 
-            border-radius: 12px; 
-            z-index: 50;
-            max-height: 220px; 
-            overflow-y: auto; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
-            display: none; 
-            border: 1px solid #f3f4f6;
-        }
-        .suggestion-item { 
-            padding: 10px 15px; 
-            font-size: 13px; 
-            cursor: pointer; 
-            border-bottom: 1px solid #f1f5f9; 
-            color: #334155; 
-        }
-        .suggestion-item:hover { 
-            background-color: #f8fafc; 
-            color: #6366f1; 
-        }
+        #autocomplete-list { position: absolute; top: 110%; left: 0; right: 0; background: white; border-radius: 12px; z-index: 50; max-height: 220px; overflow-y: auto; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); display: none; border: 1px solid #f3f4f6; }
+        .suggestion-item { padding: 10px 15px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        .suggestion-item:hover { background-color: #f8fafc; color: #6366f1; }
 
-        /* --- BOTTONE ELIMINA (X) --- */
-        .delete-btn {
-            position: absolute; 
-            top: -6px; 
-            right: -6px; 
-            background: #ef4444; 
-            color: white;
-            width: 20px; 
-            height: 20px; 
-            border-radius: 50%;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            font-size: 10px; 
-            cursor: pointer; 
-            opacity: 0; 
-            transition: all 0.2s; 
-            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
-            z-index: 20; 
-            transform: scale(0.8);
-        }
-        .activity-card:hover .delete-btn { 
-            opacity: 1; 
-            top: 5px; 
-            right: 5px; 
-            transform: scale(1); 
-        }
+        .delete-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; opacity: 0; transition: all 0.2s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); z-index: 20; transform: scale(0.8); }
+        .activity-card:hover .delete-btn { opacity: 1; top: 5px; right: 5px; transform: scale(1); }
 
-        /* --- ANIMAZIONI --- */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        
-        .chevron-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        /* --- LEGENDA MAPPA --- */
-        .map-legend { 
-            font-family: 'Poppins', sans-serif; 
-            font-size: 10px; 
-            line-height: 1.5; 
-            color: #334155; 
-        }
-        .legend-dot { 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            display: inline-block; 
-            margin-right: 5px; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2); 
-        }
-        
-        /* --- TEMPLATE PDF NASCOSTO --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .map-legend { font-family: 'Poppins', sans-serif; font-size: 10px; line-height: 1.5; color: #334155; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         #pdf-template { display: none; }
     </style>
 </head>
@@ -313,7 +86,7 @@
                 <i class="fas fa-paper-plane text-base"></i>
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-tight leading-none text-slate-800">WayFinder</h1>
+                <h1 class="text-lg font-bold tracking-tight text-slate-800">WayFinder</h1>
                 <p class="text-[9px] text-slate-400 font-medium tracking-wide">ULTIMATE EDITION</p>
             </div>
         </div>
@@ -322,7 +95,6 @@
             <button onclick="saveItineraryCheck()" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center gap-2 shadow-sm">
                 <i class="fas fa-save"></i> <span>SALVA VIAGGIO</span>
             </button>
-            
             <div class="relative">
                 <button onclick="toggleUserMenu()" class="flex items-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-full transition shadow-sm cursor-pointer">
                     <div class="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
@@ -331,43 +103,26 @@
                     <span class="text-sm font-semibold text-slate-600 hidden sm:block"><%= user %></span>
                     <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                 </button>
-
                 <div id="user-dropdown" class="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl z-50">
                     <div class="px-5 py-3 border-b border-gray-50 bg-gray-50/50 rounded-t-xl">
                         <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wide mb-1">Account</p>
                         <p class="text-sm font-bold text-gray-800 truncate"><%= user %></p>
                     </div>
-
                     <div class="py-2">
                         <div class="menu-item" onclick="window.location.href='/my-trips'">
                             <i class="fas fa-suitcase text-indigo-500"></i> <span>I miei Viaggi</span>
                         </div>
-                        
                         <div class="menu-item group relative" onclick="toggleLanguage()">
-                            <i class="fas fa-globe text-blue-500"></i> 
-                            <span class="flex-1">Lingua / Language</span>
+                            <i class="fas fa-globe text-blue-500"></i> <span class="flex-1">Lingua / Language</span>
                             <span id="currentLangDisplay" class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">IT</span>
-                            <select id="langSelect" onchange="changeLanguage()" class="hidden">
-                                <option value="it">IT</option>
-                                <option value="en">EN</option>
-                            </select>
+                            <select id="langSelect" onchange="changeLanguage()" class="hidden"><option value="it">IT</option><option value="en">EN</option></select>
                         </div>
-
                         <div class="my-1 border-t border-gray-100"></div>
-
-                        <div class="menu-item" onclick="shareItinerary()">
-                            <i class="fas fa-share-alt text-green-500"></i> <span>Condividi</span>
-                        </div>
-                        
-                        <div class="menu-item" onclick="downloadPDF()">
-                            <i class="fas fa-file-pdf text-red-500"></i> <span>Scarica PDF</span>
-                        </div>
-
+                        <div class="menu-item" onclick="shareItinerary()"><i class="fas fa-share-alt text-green-500"></i> <span>Condividi</span></div>
+                        <div class="menu-item" onclick="downloadPDF()"><i class="fas fa-file-pdf text-red-500"></i> <span>Scarica PDF</span></div>
+                        <div class="menu-item" onclick="saveItineraryCheck()"><i class="fas fa-save text-orange-500"></i> <span>Salva Modifiche</span></div>
                         <div class="my-1 border-t border-gray-100"></div>
-
-                        <a href="/logout" class="menu-item text-red-600 hover:bg-red-50">
-                            <i class="fas fa-sign-out-alt"></i> <span>Esci</span>
-                        </a>
+                        <a href="/logout" class="menu-item text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt"></i> <span>Esci</span></a>
                     </div>
                 </div>
             </div>
@@ -375,59 +130,39 @@
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-        
         <aside class="w-[360px] bg-white border-r border-gray-200 flex flex-col z-20 shadow-xl shrink-0 h-full">
-            
             <div class="flex-shrink-0">
                 <div class="p-4 space-y-3 border-b border-dashed border-gray-200">
-                    
                     <div class="relative">
                         <i class="fas fa-heading absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-                        <input type="text" id="tripTitle" placeholder="Nome del viaggio (es. Weekend a Roma)" 
-                            class="w-full pl-9 p-2 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all placeholder:text-indigo-300">
+                        <input type="text" id="tripTitle" placeholder="Nome del viaggio (es. Weekend a Roma)" class="w-full pl-9 p-2 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all placeholder:text-indigo-300">
                     </div>
-
                     <div class="relative group">
                         <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-                        <input type="text" id="destination" autocomplete="off" placeholder="Dove vuoi andare?" 
-                            class="w-full pl-9 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400">
+                        <input type="text" id="destination" autocomplete="off" placeholder="Dove vuoi andare?" class="w-full pl-9 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400">
                         <div id="autocomplete-list"></div>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-2">
                         <input type="date" id="startDate" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 focus:border-primary outline-none">
                         <input type="date" id="endDate" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 focus:border-primary outline-none">
                     </div>
-                    
                     <div>
                         <label class="block text-[9px] uppercase font-bold text-slate-400 mb-1.5 ml-1 tracking-wider" data-lang="mood">Scegli il tuo stile</label>
                         <input type="hidden" id="searchMood" value="culturale">
                         <div class="mood-grid">
-                            <div class="mood-card selected" onclick="setMood('culturale', this)">
-                                <span class="mood-icon">🏛️</span><span class="mood-label" data-lang="culture">Cultura</span>
-                            </div>
-                            <div class="mood-card" onclick="setMood('gastronomico', this)">
-                                <span class="mood-icon">🍝</span><span class="mood-label" data-lang="food">Gourmet</span>
-                            </div>
-                            <div class="mood-card" onclick="setMood('divertimento', this)">
-                                <span class="mood-icon">🍸</span><span class="mood-label" data-lang="party">Party</span>
-                            </div>
-                            <div class="mood-card" onclick="setMood('relax', this)">
-                                <span class="mood-icon">🍃</span><span class="mood-label" data-lang="relax">Relax</span>
-                            </div>
+                            <div class="mood-card selected" onclick="setMood('culturale', this)"><span class="mood-icon">🏛️</span><span class="mood-label" data-lang="culture">Cultura</span></div>
+                            <div class="mood-card" onclick="setMood('gastronomico', this)"><span class="mood-icon">🍝</span><span class="mood-label" data-lang="food">Gourmet</span></div>
+                            <div class="mood-card" onclick="setMood('divertimento', this)"><span class="mood-icon">🍸</span><span class="mood-label" data-lang="party">Party</span></div>
+                            <div class="mood-card" onclick="setMood('relax', this)"><span class="mood-icon">🍃</span><span class="mood-label" data-lang="relax">Relax</span></div>
                         </div>
                     </div>
-
                     <button onclick="startPlanning()" class="w-full bg-gradient-to-r from-primary to-accent hover:from-indigo-600 hover:to-violet-600 text-white py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 flex justify-center items-center gap-2">
                         <span data-lang="find">TROVA LUOGHI</span> <i class="fas fa-magic"></i>
                     </button>
                 </div>
-
                 <div class="px-4 py-2 bg-slate-50/50 border-b border-gray-200">
                     <div class="relative mb-2">
-                        <input type="text" id="localSearch" onkeyup="if(event.key === 'Enter') searchOnline(); else filterBySearchTerm();" 
-                            placeholder="Cerca qui o premi Invio per cercare online..." 
-                            class="w-full pl-2 pr-6 p-1 bg-transparent border-b border-slate-300 text-xs focus:border-primary outline-none transition-colors">
+                        <input type="text" id="localSearch" onkeyup="if(event.key === 'Enter') searchOnline(); else filterBySearchTerm();" placeholder="Cerca qui o premi Invio per cercare online..." class="w-full pl-2 pr-6 p-1 bg-transparent border-b border-slate-300 text-xs focus:border-primary outline-none transition-colors">
                         <i class="fas fa-filter absolute right-1 top-1.5 text-slate-400 text-[10px]"></i>
                     </div>
                     <div class="flex flex-wrap gap-1.5 justify-center">
@@ -439,13 +174,10 @@
                     </div>
                 </div>
             </div>
-
             <div class="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50" id="scroll-container">
                 <div id="suggestions-pool" class="space-y-2 pb-10">
                     <div class="flex flex-col items-center justify-center h-full pt-10 text-slate-300">
-                        <div class="bg-white p-3 rounded-full shadow-sm mb-2">
-                            <i class="fas fa-globe-europe text-2xl text-indigo-100"></i>
-                        </div>
+                        <div class="bg-white p-3 rounded-full shadow-sm mb-2"><i class="fas fa-globe-europe text-2xl text-indigo-100"></i></div>
                         <p class="text-[10px] font-medium uppercase tracking-wide" data-lang="start">Inizia la ricerca</p>
                     </div>
                 </div>
@@ -453,29 +185,25 @@
         </aside>
 
         <main class="flex-1 bg-slate-100 flex flex-col min-w-[380px] border-r border-gray-200 relative">
-            <div class="p-3 bg-white border-b flex justify-between items-center z-10">
-                <span class="text-xs font-bold text-slate-700 uppercase" data-lang="itinerary">ITINERARIO</span>
+            <div class="p-3 bg-white/80 backdrop-blur border-b border-gray-200 flex justify-between items-center z-10">
+                <div class="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase tracking-wide">
+                    <i class="far fa-calendar-alt text-indigo-500"></i> <span data-lang="itinerary">Il tuo Itinerario</span>
+                </div>
             </div>
-            
             <div id="timeline-container" class="flex-1 overflow-y-auto p-4 space-y-3 relative z-0"></div>
         </main>
 
         <div class="w-[45%] relative group shadow-inner">
             <div id="map" class="z-0 h-full w-full"></div>
-            
             <div class="absolute bottom-5 right-5 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-xl z-[1000] border border-white/50 w-32 map-legend">
-                <div class="font-bold text-slate-800 border-b border-slate-200 pb-1 mb-1 text-[10px] uppercase tracking-wide">LEGENDA</div>
+                <div class="font-bold text-slate-800 border-b border-slate-200 pb-1 mb-1 text-[10px] uppercase tracking-wide">Legenda</div>
                 <div class="flex items-center mb-1"><span class="legend-dot" style="background:#8b5cf6"></span> Cultura</div>
                 <div class="flex items-center mb-1"><span class="legend-dot" style="background:#3b82f6"></span> Attrazioni</div>
                 <div class="flex items-center mb-1"><span class="legend-dot" style="background:#f97316"></span> Cibo</div>
                 <div class="flex items-center mb-1"><span class="legend-dot" style="background:#ef4444"></span> Party</div>
                 <div class="flex items-center"><span class="legend-dot" style="background:#10b981"></span> Relax</div>
             </div>
-
             <div id="loading" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-[2000] flex flex-col items-center justify-center transition-opacity">
-                <div class="relative">
-                    <div class="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                </div>
                 <p class="mt-3 font-bold text-xs text-slate-600 tracking-wide animate-pulse">CARICAMENTO...</p>
             </div>
         </div>
@@ -487,7 +215,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     
     <script>
-        // --- 1. CONFIGURAZIONE INIZIALE E VARIABILI GLOBALI ---
         const map = L.map('map', { preferCanvas: true, zoomControl: false }).setView([41.9028, 12.4964], 6);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB', maxZoom: 19 }).addTo(map);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -501,7 +228,6 @@
         let currentTripId = null; 
         let currentCityCoords = { lat: 41.9028, lon: 12.4964 };
 
-        // Impostazione date default (Oggi e Dopodomani)
         document.getElementById('startDate').valueAsDate = new Date();
         const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 2);
         document.getElementById('endDate').valueAsDate = tomorrow;
@@ -515,30 +241,26 @@
             altro: { icon: '🔹', color: '#64748b' }
         };
 
-        // --- 2. GESTIONE NOTE (NUOVA FUNZIONE) ---
-        function addNoteToDay(dayIndex) {
+        // --- GESTIONE NOTE (Con Colori e Bianco) ---
+        function addNoteToDay(dayIndex, savedText = '', savedTime = '', savedBg = '#fef9c3', savedBorder = '#eab308') {
             const dayContent = document.getElementById(`day-content-${dayIndex}`);
-            // Se il giorno è chiuso, aprilo
-            if(dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) {
-                toggleDay(dayIndex);
-            }
+            if(dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(dayIndex);
             
             const card = document.createElement('div');
-            // Nota: Usiamo style inline per il colore iniziale, che verrà aggiornato
             card.className = `activity-card note-card in-timeline`;
-            card.style.backgroundColor = '#fef9c3'; // Giallo default
-            card.style.borderLeftColor = '#eab308'; // Giallo scuro default
+            card.style.backgroundColor = savedBg;
+            card.style.borderLeftColor = savedBorder;
             
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <textarea class="note-input" placeholder="Scrivi una nota... (es. Prenotazione h 20:00)" rows="2"></textarea>
+                    <textarea class="note-input" placeholder="Scrivi una nota... (es. Prenotazione h 20:00)" rows="2">${savedText}</textarea>
                     <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
                 </div>
                 <div class="mt-2 border-t border-black/5 pt-2 flex items-center gap-2">
                     <i class="far fa-clock text-gray-400 text-[10px]"></i>
-                    <input type="time" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
-                    
+                    <input type="time" value="${savedTime}" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
                     <div class="flex gap-1 ml-auto">
+                        <div class="color-dot bg-white border-gray-300" onclick="changeNoteColor(this, '#ffffff', '#e5e7eb')"></div>
                         <div class="color-dot bg-yellow-200" onclick="changeNoteColor(this, '#fef9c3', '#eab308')"></div>
                         <div class="color-dot bg-pink-200" onclick="changeNoteColor(this, '#fce7f3', '#db2777')"></div>
                         <div class="color-dot bg-blue-200" onclick="changeNoteColor(this, '#dbeafe', '#2563eb')"></div>
@@ -550,185 +272,15 @@
             updateCount();
         }
 
-        // Funzione per cambiare colore alla nota al volo
         function changeNoteColor(dot, bg, border) {
             const card = dot.closest('.note-card');
             card.style.backgroundColor = bg;
             card.style.borderLeftColor = border;
-            // Aggiorna anche il bordo dell'input tempo per coerenza estetica
-            const timeInput = card.querySelector('input[type="time"]');
-            if(timeInput) timeInput.style.borderColor = border;
         }
 
-        // --- 3. RICERCA ONLINE SPECIFICA ---
-        async function searchOnline() {
-            const query = document.getElementById('localSearch').value;
-            if(!query) return;
-            document.getElementById('loading').classList.remove('hidden');
-            
-            try {
-                // Chiama la nuova API del server che fa una query specifica su OSM
-                const res = await fetch('/api/search-specific', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ query, lat: currentCityCoords.lat, lon: currentCityCoords.lon })
-                });
-                const data = await res.json();
-                
-                if(data.success && data.places.length > 0) {
-                    // Aggiungi i risultati trovati alla lista esistente
-                    data.places.forEach(p => {
-                        p.category = normalizeCategory(p.category);
-                        // Evita duplicati controllando l'ID
-                        if(!allLoadedPlaces.find(x => String(x.id) === String(p.id))) {
-                            allLoadedPlaces.push(p);
-                        }
-                    });
-                    // Ridisegna la lista e avvisa l'utente
-                    renderApp();
-                    alert(`Trovati ${data.places.length} nuovi luoghi per "${query}"!`);
-                } else {
-                    alert("Nessun luogo trovato online con questo nome.");
-                }
-            } catch(e) { console.error(e); }
-            document.getElementById('loading').classList.add('hidden');
-        }
-
-        // --- 4. MENU E UTENTE ---
-        function toggleUserMenu() {
-            document.getElementById('user-dropdown').classList.toggle('open');
-        }
-        
-        // Chiudi dropdown se clicco fuori
-        document.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('user-dropdown');
-            const btn = e.target.closest('button');
-            if (!btn && !e.target.closest('#user-dropdown')) dropdown.classList.remove('open');
-        });
-
-        // --- 5. CARICAMENTO DATI (AUTO-LOAD) ---
-        // Questa funzione parte appena la pagina è caricata
-        window.onload = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tripId = urlParams.get('tripId');
-            
-            // Se c'è un ID nell'URL, carichiamo quel viaggio
-            if(tripId) {
-                document.getElementById('loading').classList.remove('hidden');
-                try {
-                    const res = await fetch(`/api/get-trip/${tripId}`);
-                    const json = await res.json();
-                    
-                    if(json.success && json.data) {
-                        const saved = json.data;
-                        currentTripId = saved.id;
-                        
-                        // Ripristina campi input
-                        document.getElementById('tripTitle').value = saved.title || ""; 
-                        document.getElementById('destination').value = saved.destination;
-                        document.getElementById('startDate').value = saved.startDate;
-                        document.getElementById('endDate').value = saved.endDate;
-                        setMood(saved.mood, document.querySelector(`.mood-card[onclick*="'${saved.mood}'"]`));
-
-                        allLoadedPlaces = saved.places;
-                        tripDays = generateDateSlots(saved.startDate, saved.endDate);
-                        
-                        // Ripristino Schedule (Luoghi + Note)
-                        if (saved.schedule) {
-                            saved.schedule.forEach((dayItems, index) => {
-                                const dayContent = document.getElementById(`day-content-${index}`);
-                                if(dayContent) {
-                                    dayItems.forEach(item => {
-                                        const type = item.type || 'place';
-                                        const time = item.time || '';
-
-                                        if (type === 'note') {
-                                            // Ricrea Nota Salvata
-                                            const card = document.createElement('div');
-                                            card.className = `activity-card note-card in-timeline`;
-                                            // Ripristina colori salvati
-                                            card.style.backgroundColor = item.bg || '#fef9c3';
-                                            card.style.borderLeftColor = item.border || '#eab308';
-                                            
-                                            card.innerHTML = `
-                                                <div class="flex justify-between items-start">
-                                                    <textarea class="note-input" rows="2">${item.text}</textarea>
-                                                    <div class="delete-btn" onclick="this.parentElement.parentElement.remove(); updateCount();"><i class="fas fa-trash"></i></div>
-                                                </div>
-                                                <div class="mt-2 border-t border-black/5 pt-2 flex items-center gap-2">
-                                                    <i class="far fa-clock text-gray-400 text-[10px]"></i>
-                                                    <input type="time" value="${time}" class="text-[10px] p-1 border border-yellow-200 rounded bg-white text-slate-600 outline-none w-20">
-                                                    <div class="flex gap-1 ml-auto">
-                                                        <div class="color-dot bg-yellow-200" onclick="changeNoteColor(this, '#fef9c3', '#eab308')"></div>
-                                                        <div class="color-dot bg-pink-200" onclick="changeNoteColor(this, '#fce7f3', '#db2777')"></div>
-                                                        <div class="color-dot bg-blue-200" onclick="changeNoteColor(this, '#dbeafe', '#2563eb')"></div>
-                                                        <div class="color-dot bg-green-200" onclick="changeNoteColor(this, '#dcfce7', '#16a34a')"></div>
-                                                    </div>
-                                                </div>`;
-                                            dayContent.appendChild(card);
-                                        } else {
-                                            // Ricrea Luogo Salvato
-                                            const placeId = item.id || item;
-                                            const place = allLoadedPlaces.find(p => String(p.id) === String(placeId));
-                                            
-                                            if (place) {
-                                                const card = createCard(place, true, time);
-                                                dayContent.appendChild(card);
-                                                markAsAdded(placeId);
-                                            }
-                                        }
-                                    });
-                                    // Se il giorno ha cose dentro, aprilo
-                                    if(dayItems.length > 0) toggleDay(index);
-                                }
-                            });
-                        }
-                        
-                        renderApp();
-                        updateCount();
-                    } else {
-                        alert("Impossibile caricare il viaggio.");
-                    }
-                } catch(e) { console.error(e); }
-                document.getElementById('loading').classList.add('hidden');
-            }
-        };
-
-        // --- 6. MULTILINGUA ---
-        const translations = {
-            it: {
-                save: "Salva", mood: "Scegli il tuo stile", culture: "Cultura", food: "Gourmet", party: "Party", relax: "Relax",
-                find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "ITINERARIO"
-            },
-            en: {
-                save: "Save", mood: "Choose your mood", culture: "Culture", food: "Gourmet", party: "Party", relax: "Relax",
-                find: "FIND PLACES", start: "Start Searching", itinerary: "ITINERARY"
-            }
-        };
-
-        function toggleLanguage() {
-            const select = document.getElementById('langSelect');
-            select.value = select.value === 'it' ? 'en' : 'it';
-            changeLanguage();
-        }
-
-        function changeLanguage() {
-            const lang = document.getElementById('langSelect').value;
-            document.getElementById('currentLangDisplay').innerText = lang.toUpperCase();
-            const t = translations[lang];
-            
-            document.querySelectorAll('[data-lang]').forEach(el => {
-                const key = el.getAttribute('data-lang');
-                if (t[key]) el.innerText = t[key];
-            });
-            document.getElementById('destination').placeholder = lang === 'it' ? "Dove vuoi andare?" : "Where do you want to go?";
-            document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
-        }
-
-        // --- 7. SALVATAGGIO COMPLETO (Luoghi + Note + Colori + Orari) ---
+        // --- SALVATAGGIO COMPLETO ---
         async function saveItineraryCheck() {
             const schedule = [];
-            
-            // Scansiona ogni giorno
             document.querySelectorAll('.day-slot').forEach(slot => {
                 const dayItems = [];
                 slot.querySelectorAll('.activity-card').forEach(card => {
@@ -736,13 +288,11 @@
                     const timeVal = timeInput ? timeInput.value : '';
 
                     if (card.classList.contains('note-card')) {
-                        // Salva Nota con colori personalizzati
                         const text = card.querySelector('textarea').value;
                         const bg = card.style.backgroundColor;
                         const border = card.style.borderLeftColor;
                         dayItems.push({ type: 'note', text: text, time: timeVal, bg: bg, border: border });
                     } else {
-                        // Salva Luogo
                         dayItems.push({ type: 'place', id: card.dataset.id, time: timeVal });
                     }
                 });
@@ -751,8 +301,10 @@
 
             const tripTitle = document.getElementById('tripTitle').value.trim() || document.getElementById('destination').value;
             let overwrite = false;
-
-            // Chiedi conferma sovrascrittura se stiamo modificando
+            
+            // Logica di conferma sovrascrittura spostata nel backend per coerenza con il titolo
+            // Qui ci limitiamo a inviare. Se c'è un ID, il server cercherà di sovrascrivere o creare nuovo in base alla logica del titolo.
+            // Per sicurezza, chiediamo comunque se l'ID esiste già.
             if (currentTripId) {
                 if (confirm(`Vuoi sovrascrivere "${tripTitle}"?\nOK = Sì (Sovrascrivi)\nAnnulla = No (Salva Copia)`)) overwrite = true;
             }
@@ -776,18 +328,70 @@
                 const data = await res.json();
                 if(data.success) {
                     currentTripId = data.tripId; 
+                    const newUrl = new URL(window.location);
+                    newUrl.searchParams.set('tripId', data.tripId);
+                    window.history.pushState({}, '', newUrl);
                     alert("Viaggio salvato con successo!");
                 } else alert("Errore nel salvataggio.");
             } catch(e) { alert("Errore di connessione."); }
         }
 
-        // --- 8. GENERATORE PDF PRO (Include Note Colorate) ---
+        // --- CARICAMENTO ---
+        window.onload = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tripId = urlParams.get('tripId');
+            if(tripId) {
+                document.getElementById('loading').classList.remove('hidden');
+                try {
+                    const res = await fetch(`/api/get-trip/${tripId}`);
+                    const json = await res.json();
+                    if(json.success && json.data) {
+                        const saved = json.data;
+                        currentTripId = saved.id;
+                        document.getElementById('tripTitle').value = saved.title || "";
+                        document.getElementById('destination').value = saved.destination;
+                        document.getElementById('startDate').value = saved.startDate;
+                        document.getElementById('endDate').value = saved.endDate;
+                        setMood(saved.mood, document.querySelector(`.mood-card[onclick*="'${saved.mood}'"]`));
+                        allLoadedPlaces = saved.places;
+                        tripDays = generateDateSlots(saved.startDate, saved.endDate);
+                        
+                        if (saved.schedule) {
+                            saved.schedule.forEach((dayItems, index) => {
+                                const dayContent = document.getElementById(`day-content-${index}`);
+                                if(dayContent) {
+                                    dayItems.forEach(item => {
+                                        const type = item.type || 'place';
+                                        if (type === 'note') {
+                                            addNoteToDay(index, item.text, item.time, item.bg, item.border);
+                                        } else {
+                                            const pid = item.id || item;
+                                            const place = allLoadedPlaces.find(p => String(p.id) === String(pid));
+                                            if (place) {
+                                                const card = createCard(place, true, item.time);
+                                                dayContent.appendChild(card);
+                                                markAsAdded(pid);
+                                            }
+                                        }
+                                    });
+                                    if(dayItems.length>0) toggleDay(index);
+                                }
+                            });
+                        }
+                        renderApp();
+                        updateCount();
+                    }
+                } catch(e) {}
+                document.getElementById('loading').classList.add('hidden');
+            }
+        };
+
+        // --- PDF GENERATOR PRO ---
         function downloadPDF() {
             const title = document.getElementById('tripTitle').value || "Mio Viaggio";
             const dest = document.getElementById('destination').value;
             const container = document.getElementById('pdf-template');
             
-            // Costruisce un HTML pulito specifico per la stampa
             let html = `
                 <div style="padding: 40px; font-family: sans-serif;">
                     <h1 style="color: #6366f1; font-size: 28px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">${title}</h1>
@@ -797,8 +401,6 @@
             
             document.querySelectorAll('.day-slot').forEach((slot, index) => {
                 const dateHeader = document.querySelectorAll('.bg-white.px-4 h3')[index]?.innerText || `Giorno ${index+1}`;
-                
-                // Controlla se ci sono card vere (escluso placeholder)
                 const hasCards = Array.from(slot.children).some(c => c.classList.contains('activity-card'));
 
                 if(hasCards) {
@@ -810,13 +412,11 @@
                         const timeStr = time ? `<b>${time}</b> ` : '';
 
                         if (card.classList.contains('note-card')) {
-                            // Renderizza Nota nel PDF con il suo colore
                             const text = card.querySelector('textarea').value;
                             const bg = card.style.backgroundColor || '#fef9c3';
                             const border = card.style.borderLeftColor || '#eab308';
                             html += `<li style="background:${bg}; padding:10px; margin-bottom:5px; border-left:4px solid ${border}; font-style:italic;">${timeStr} ${text}</li>`;
                         } else {
-                            // Renderizza Luogo nel PDF
                             const name = card.querySelector('h4').innerText.replace('🔥','');
                             const cat = card.querySelector('span.uppercase').innerText;
                             const color = card.style.borderLeftColor;
@@ -840,7 +440,13 @@
             }).from(container).save().then(() => { container.style.display = 'none'; });
         }
 
-        // --- 9. FUNZIONI UI STANDARD (Mood, Autocomplete, Marker) ---
+        // --- FUNZIONI CORE STANDARD ---
+        function toggleUserMenu() { document.getElementById('user-dropdown').classList.toggle('open'); }
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('user-dropdown');
+            const btn = e.target.closest('button');
+            if (!btn && !e.target.closest('#user-dropdown')) dropdown.classList.remove('open');
+        });
         
         window.setMood = function(mood, cardElement) {
             document.getElementById('searchMood').value = mood;
@@ -878,6 +484,28 @@
             }, 300);
         });
         document.addEventListener('click', (e) => { if(e.target !== destInput) suggestionsList.style.display = 'none'; });
+
+        async function searchOnline() {
+            const query = document.getElementById('localSearch').value;
+            if(!query) return;
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await fetch('/api/search-specific', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ query, lat: currentCityCoords.lat, lon: currentCityCoords.lon })
+                });
+                const data = await res.json();
+                if(data.success && data.places.length > 0) {
+                    data.places.forEach(p => {
+                        p.category = normalizeCategory(p.category);
+                        if(!allLoadedPlaces.find(x => String(x.id) === String(p.id))) allLoadedPlaces.push(p);
+                    });
+                    renderApp();
+                    alert(`Trovati ${data.places.length} nuovi luoghi per "${query}"!`);
+                } else alert("Nessun luogo trovato online.");
+            } catch(e) {}
+            document.getElementById('loading').classList.add('hidden');
+        }
 
         function markAsAdded(id) {
             id = String(id);
@@ -945,30 +573,22 @@
             const mood = document.getElementById('searchMood').value;
             if(!dest) return alert("Inserisci una città!");
             document.getElementById('loading').classList.remove('hidden');
-            
             tripDays = generateDateSlots(document.getElementById('startDate').value, document.getElementById('endDate').value);
             addedPlaces.clear(); 
             configureFiltersByMood(mood);
-
             try {
                 const response = await fetch('/api/generate', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ destination: dest, mood: mood })
                 });
                 const data = await response.json();
-                
-                if (!data || !data.success) throw new Error(data.message || "Errore del server");
-                if (!data.destinationCoords) throw new Error("Dati geografici non ricevuti.");
+                if (!data || !data.success) throw new Error(data.message || "Errore");
                 currentCityCoords = data.destinationCoords;
-
                 const { lat, lon } = data.destinationCoords;
                 map.setView([lat, lon], 13);
-                
                 allLoadedPlaces = data.places.map(p => ({ ...p, category: normalizeCategory(p.category) }));
                 allLoadedPlaces.sort((a, b) => b.score - a.score);
-                
                 renderApp();
-
             } catch (err) { alert("Errore: " + err.message); } 
             finally { document.getElementById('loading').classList.add('hidden'); }
         }
@@ -989,17 +609,13 @@
             pool.innerHTML = '';
             markersGroup.clearLayers();
             markersMap = {};
-
             let visibleCount = 0;
-
             allLoadedPlaces.forEach((place, index) => {
                 const cat = place.category;
                 if (!filters[cat]) return; 
                 if (searchTerm && !place.name.toLowerCase().includes(searchTerm)) return;
-
                 visibleCount++;
                 drawMarker(place);
-                
                 const card = createCard(place, false);
                 if(card.style.display !== 'none') {
                     card.style.animationDelay = `${Math.min(index * 0.05, 1)}s`;
@@ -1007,197 +623,171 @@
                 }
                 pool.appendChild(card);
             });
-
             if(visibleCount === 0) pool.innerHTML = `<div class="text-center mt-10 p-4 text-xs text-gray-400">Nessun risultato locale.<br>Premi <b>Invio</b> per cercare online.</div>`;
             initDragAndDrop();
         }
 
-        function drawMarker(place) {
-            const style = CAT_DATA[place.category] || CAT_DATA.altro;
-            const circle = L.circleMarker([place.lat, place.lng], {
-                radius: 6, fillColor: style.color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
-            });
-            let optionsHtml = tripDays.map((day, i) => `<option value="${i}">Giorno ${i+1}</option>`).join('');
-            const popupContent = `
-                <div class="text-center p-2 min-w-[180px]">
-                    <b class="text-slate-800 text-sm block mb-1 truncate font-sans">${place.name}</b>
-                    <span class="text-[9px] text-white px-2 py-0.5 rounded-full font-bold uppercase" style="background:${style.color}">${place.category}</span>
-                    <p class="text-[10px] text-gray-500 mt-2 mb-2 line-clamp-2">${place.description}</p>
-                    <div class="flex gap-1 justify-center mt-2 border-t pt-2">
-                        <select id="sel-${place.id}" class="text-xs border rounded w-full bg-gray-50 p-1 outline-none text-slate-600">${optionsHtml}</select>
-                        <button onclick="addToDay('${place.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 rounded font-bold transition-colors">+</button>
-                    </div>
-                </div>`;
-            circle.bindPopup(popupContent);
-            markersMap[place.id] = circle;
-            markersGroup.addLayer(circle);
+        function drawMarker(p) {
+            const s = CAT_DATA[p.category] || CAT_DATA.altro;
+            const c = L.circleMarker([p.lat, p.lng], {radius:6, fillColor:s.color, color:'#fff', weight:2, opacity:1, fillOpacity:0.9});
+            const pop=`<div class="text-center p-2 min-w-[180px]"><b class="text-slate-800 text-sm block mb-1 truncate font-sans">${p.name}</b><span class="text-[9px] text-white px-2 py-0.5 rounded-full font-bold uppercase" style="background:${s.color}">${p.category}</span><p class="text-[10px] text-gray-500 mt-2 mb-2 line-clamp-2">${p.description}</p><button onclick="addToDay('${p.id}')" class="bg-indigo-600 text-white text-xs px-3 py-1 rounded w-full font-bold">Aggiungi +</button></div>`;
+            c.bindPopup(pop);
+            markersMap[p.id]=c;
+            markersGroup.addLayer(c);
         }
 
-        function createCard(place, isTimeline = false, savedTime = '') {
-            const style = CAT_DATA[place.category] || CAT_DATA.altro;
-            const extraClass = isTimeline ? 'in-timeline' : 'suggestion-card';
-            const initialDisplay = (!isTimeline && addedPlaces.has(String(place.id))) ? 'none' : 'block';
-            
+        function createCard(p, isTimeline = false, savedTime = '') {
+            const s = CAT_DATA[p.category] || CAT_DATA.altro;
+            const ex = isTimeline ? 'in-timeline' : 'suggestion-card';
+            const disp = (!isTimeline && addedPlaces.has(String(p.id))) ? 'none' : 'block';
             const card = document.createElement('div');
-            card.className = `activity-card ${extraClass}`;
-            card.style.display = initialDisplay;
-            card.style.borderLeftColor = style.color;
-            card.dataset.id = place.id;
-
+            card.className = `activity-card ${ex}`;
+            card.style.display = disp;
+            card.style.borderLeftColor = s.color;
+            card.dataset.id = p.id;
             if (!isTimeline) {
-                card.onmouseenter = () => highlightMarker(place.id);
-                card.onmouseleave = () => resetMarker(place.id);
+                card.onmouseenter = () => highlightMarker(p.id);
+                card.onmouseleave = () => resetMarker(p.id);
             }
-
-            const fire = place.score > 800 ? '<span class="text-orange-500 ml-1" title="Top">🔥</span>' : '';
-            const hideTime = isTimeline ? '' : 'hidden';
-
+            const fire = p.score > 800 ? '<span class="text-orange-500 ml-1" title="Top">🔥</span>' : '';
+            const hide = isTimeline ? '' : 'hidden';
             card.innerHTML = `
                 <div class="card-header pr-6">
-                    <h4 class="font-semibold text-xs text-slate-800 leading-tight mb-1">${place.name} ${fire}</h4>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] uppercase font-bold tracking-wider" style="color:${style.color}">${style.icon} ${place.category}</span>
-                    </div>
+                    <h4 class="font-semibold text-xs text-slate-800 leading-tight mb-1">${p.name} ${fire}</h4>
+                    <span class="text-[9px] uppercase font-bold tracking-wider" style="color:${s.color}">${s.icon} ${p.category}</span>
                 </div>
-                <div class="time-selector ${hideTime} mt-2 pt-2 border-t border-dashed border-slate-200 flex items-center gap-2">
+                <div class="time-selector ${hide} mt-2 pt-2 border-t border-dashed border-slate-200 flex items-center gap-2">
                     <i class="far fa-clock text-slate-400 text-[10px]"></i>
                     <input type="time" value="${savedTime}" class="text-[10px] p-1 border border-slate-200 rounded bg-white text-slate-600 outline-none w-20 focus:border-indigo-400">
                 </div>
             `;
-
             if (isTimeline) {
                 const btn = document.createElement('div');
                 btn.className = 'delete-btn';
                 btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                btn.onclick = function() { removeFromTimeline(this, place.id); };
+                btn.onclick = () => { card.remove(); markAsRemoved(p.id); updateCount(); };
                 card.appendChild(btn);
             }
-
             return card;
         }
 
         window.addToDay = function(id) {
-            const dayIdx = document.getElementById(`sel-${id}`).value;
-            const place = allLoadedPlaces.find(p => String(p.id) === String(id));
-            const dayContent = document.getElementById(`day-content-${dayIdx}`);
-            if (dayContent && dayContent.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(dayIdx);
-
-            if(dayContent && place) {
-                const card = createCard(place, true);
-                card.style.opacity = '0'; card.style.transform = 'translateY(10px)';
-                dayContent.prepend(card);
-                requestAnimationFrame(() => { card.style.transition = 'all 0.3s ease'; card.style.opacity = '1'; card.style.transform = 'translateY(0)'; });
+            const d = document.getElementById(`sel-${id}`)?.value || 0;
+            const p = allLoadedPlaces.find(x => String(x.id) === String(id));
+            const sl = document.querySelectorAll('.day-slot');
+            let t = sl[0];
+            sl.forEach((s, i) => { if (i == d) t = s; });
+            if (t.parentElement.querySelector('.day-slot').classList.contains('hidden')) toggleDay(d);
+            if (t && p) {
+                const c = createCard(p, true);
+                c.style.opacity = '0';
+                t.prepend(c);
+                requestAnimationFrame(() => { c.style.transition = 'all 0.3s'; c.style.opacity = '1'; });
                 markAsAdded(id);
                 updateCount();
                 map.closePopup();
             }
         };
 
-        window.removeFromTimeline = function(btnElement, id) {
-            const card = btnElement.closest('.activity-card');
-            card.style.transform = 'scale(0.9) translateX(10px)'; card.style.opacity = '0';
-            setTimeout(() => { card.remove(); markAsRemoved(id); updateCount(); }, 200);
+        window.removeFromTimeline = function(el, id) {
+            el.closest('.activity-card').remove();
+            markAsRemoved(id);
+            updateCount();
         };
 
         window.updateCount = function() {
-            document.querySelectorAll('.day-slot').forEach((slot, index) => {
-                const badge = document.getElementById(`count-${index}`);
-                if(badge) {
-                    const count = slot.querySelectorAll('.activity-card').length;
-                    const notes = slot.querySelectorAll('.note-card').length;
-                    badge.innerText = `${count - notes} luoghi, ${notes} note`;
-                    const placeholder = slot.querySelector('.empty-placeholder');
-                    if(placeholder) placeholder.style.display = count > 0 ? 'none' : 'block';
+            document.querySelectorAll('.day-slot').forEach((s, i) => {
+                const b = document.getElementById(`count-${i}`);
+                if (b) {
+                    const c = s.querySelectorAll('.activity-card').length;
+                    const n = s.querySelectorAll('.note-card').length;
+                    b.innerText = `${c-n} luoghi, ${n} note`;
                 }
             });
         };
 
-        window.toggleDay = function(index) {
-            const content = document.getElementById(`day-content-${index}`);
-            const icon = document.getElementById(`day-icon-${index}`);
-            const container = content.parentElement;
-            if(content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                icon.style.transform = 'rotate(0deg)';
-                container.classList.add('ring-2', 'ring-indigo-100');
+        window.toggleDay = function(i) {
+            const c = document.getElementById(`day-content-${i}`);
+            const ic = document.getElementById(`day-icon-${i}`);
+            if (c.classList.contains('hidden')) {
+                c.classList.remove('hidden');
+                ic.style.transform = 'rotate(0deg)';
             } else {
-                content.classList.add('hidden');
-                icon.style.transform = 'rotate(-90deg)';
-                container.classList.remove('ring-2', 'ring-indigo-100');
+                c.classList.add('hidden');
+                ic.style.transform = 'rotate(-90deg)';
             }
         };
 
-        function generateDateSlots(start, end) {
-            const container = document.getElementById('timeline-container');
-            container.innerHTML = '';
-            let curr = new Date(start);
-            const fin = new Date(end);
+        function generateDateSlots(s, e) {
+            const con = document.getElementById('timeline-container');
+            con.innerHTML = '';
+            let c = new Date(s);
+            const f = new Date(e);
             let i = 0;
             tripDays = [];
-
-            while(curr <= fin) {
-                const dateStr = curr.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
-                tripDays.push(dateStr);
-                container.innerHTML += `
-                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md mb-3">
-                        <div onclick="toggleDay(${i})" class="bg-white px-4 py-3 border-b border-gray-100 flex justify-between items-center cursor-pointer select-none">
-                            <div class="flex items-center gap-3">
-                                <div class="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center"><i id="day-icon-${i}" class="fas fa-chevron-down text-indigo-500 text-xs chevron-icon"></i></div>
-                                <h3 class="font-bold text-sm text-slate-700 capitalize">${dateStr}</h3>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="event.stopPropagation(); addNoteToDay(${i})" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs transition" title="Aggiungi Nota"><i class="fas fa-sticky-note"></i> +</button>
-                                <span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase">0 stop</span>
-                            </div>
-                        </div>
-                        <div id="day-content-${i}" class="day-slot min-h-[80px] p-3 space-y-2 bg-slate-50/50">
-                            <div class="empty-placeholder text-center py-4 opacity-40 pointer-events-none">
-                                <i class="far fa-map text-slate-300 mb-1"></i>
-                                <p class="text-[10px] text-slate-400">Trascina qui i luoghi</p>
-                            </div>
-                        </div>
-                    </div>`;
-                curr.setDate(curr.getDate() + 1);
+            while (c <= f) {
+                const d = c.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+                tripDays.push(d);
+                con.innerHTML += `<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-3"><div onclick="toggleDay(${i})" class="bg-white px-4 py-3 border-b border-gray-100 flex justify-between items-center cursor-pointer select-none"><div class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center"><i id="day-icon-${i}" class="fas fa-chevron-down text-indigo-500 text-xs chevron-icon"></i></div><h3 class="font-bold text-sm text-slate-700 capitalize">${d}</h3> <button onclick="event.stopPropagation(); addNoteToDay(${i})" class="ml-2 text-indigo-400 hover:text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs" title="Aggiungi Nota"><i class="fas fa-sticky-note"></i> +</button></div><span id="count-${i}" class="text-[9px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase">0 stop</span></div><div id="day-content-${i}" class="day-slot min-h-[80px] p-3 space-y-2 bg-slate-50/50"><div class="empty-placeholder text-center py-4 opacity-40 pointer-events-none"><i class="far fa-map text-slate-300 mb-1"></i><p class="text-[10px] text-slate-400">Trascina qui</p></div></div></div>`;
+                c.setDate(c.getDate() + 1);
                 i++;
             }
             return tripDays;
         }
 
         function initDragAndDrop() {
-            const pool = document.getElementById('suggestions-pool');
-            new Sortable(pool, { group: { name: 'p', pull: 'clone', put: false }, sort: false, animation: 150, ghostClass: 'bg-indigo-50', chosenClass: 'scale-95' });
-            
-            document.querySelectorAll('.day-slot').forEach(slot => {
-                new Sortable(slot, {
-                    group: 'p', animation: 150,
-                    onAdd: (evt) => {
-                        const item = evt.item;
-                        const id = item.dataset.id;
-
-                        // Se spostamento interno, non fare nulla di distruttivo
-                        if (item.classList.contains('in-timeline')) {
+            const p = document.getElementById('suggestions-pool');
+            new Sortable(p, { group: { name: 'p', pull: 'clone', put: false }, sort: false, animation: 150 });
+            document.querySelectorAll('.day-slot').forEach(s => {
+                new Sortable(s, {
+                    group: 'p',
+                    animation: 150,
+                    onAdd: (e) => {
+                        const it = e.item;
+                        const id = it.dataset.id;
+                        if (it.classList.contains('in-timeline')) { updateCount(); return; }
+                        if (addedPlaces.has(String(id))) { it.remove(); return; }
+                        it.remove();
+                        const p = allLoadedPlaces.find(x => String(x.id) === String(id));
+                        if (p) {
+                            const nc = createCard(p, true);
+                            if (e.newIndex >= s.children.length) s.appendChild(nc); else s.insertBefore(nc, s.children[e.newIndex]);
+                            markAsAdded(id);
                             updateCount();
-                            return; 
-                        }
-
-                        // Se già aggiunto, evita duplicati
-                        if (addedPlaces.has(String(id))) { item.remove(); return; }
-
-                        // Rimuovi card grezza, crea quella bella
-                        item.remove();
-                        const place = allLoadedPlaces.find(p => String(p.id) === String(id));
-                        
-                        if(place) {
-                            const newCard = createCard(place, true);
-                            if (evt.newIndex >= slot.children.length) slot.appendChild(newCard); else slot.insertBefore(newCard, slot.children[evt.newIndex]);
-                            markAsAdded(id); updateCount();
                         }
                     },
-                    onRemove: updateCount, onEnd: updateCount
+                    onRemove: updateCount,
+                    onEnd: updateCount
                 });
             });
         }
         
+        // --- MULTILINGUA ---
+        const translations = {
+            it: { save: "Salva", mood: "Scegli il tuo stile", culture: "Cultura", food: "Gourmet", party: "Party", relax: "Relax", find: "TROVA LUOGHI", start: "Inizia la ricerca", itinerary: "ITINERARIO" },
+            en: { save: "Save", mood: "Choose your mood", culture: "Culture", food: "Gourmet", party: "Party", relax: "Relax", find: "FIND PLACES", start: "Start Searching", itinerary: "ITINERARY" }
+        };
+
+        function toggleLanguage() {
+            const select = document.getElementById('langSelect');
+            select.value = select.value === 'it' ? 'en' : 'it';
+            changeLanguage();
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('currentLangDisplay').innerText = lang.toUpperCase();
+            const t = translations[lang];
+            
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (t[key]) el.innerText = t[key];
+            });
+            document.getElementById('destination').placeholder = lang === 'it' ? "Dove vuoi andare?" : "Where do you want to go?";
+            document.getElementById('localSearch').placeholder = lang === 'it' ? "Filtra risultati..." : "Filter results...";
+        }
+
+        // --- SHARED UTILS ---
         function shareItinerary() {
             let text = `🌍 ${document.getElementById('tripTitle').value || 'Mio Viaggio'} a ${document.getElementById('destination').value}:\n\n`;
             document.querySelectorAll('.day-slot').forEach((slot, index) => {
